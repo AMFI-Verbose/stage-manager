@@ -121,6 +121,15 @@ nav#nav{display:flex;flex-direction:column;gap:3px}
 .warn .ic{width:16px;flex:0 0 16px;color:var(--amber);font-size:12px}
 .warn b{font-weight:600}
 
+/* ---------- settings ---------- */
+.langopts{display:flex;gap:12px;flex-wrap:wrap;margin-top:14px}
+.langopt{min-width:190px;text-align:left;padding:14px 16px;border:1px solid var(--line);border-radius:12px;background:#fff;color:var(--ink);cursor:pointer;transition:.14s}
+.langopt b{display:block;font-size:14px}
+.langopt span{display:block;font-size:10.5px;color:var(--dim2);margin-top:3px;letter-spacing:.04em}
+.langopt:hover{border-color:var(--line2)}
+.langopt.on{border-color:var(--accent);background:var(--accent-soft);box-shadow:0 0 0 1px var(--accent)}
+.langopt.on b{color:var(--accent)}
+
 /* ---------- scene tabs ---------- */
 .tabsbar{display:flex;align-items:flex-start;gap:12px;margin-bottom:20px;border-bottom:1px solid var(--line);padding-bottom:16px}
 .scenetabs{display:flex;gap:22px;overflow-x:auto;padding:2px 2px 0;flex:1;min-width:0}
@@ -284,16 +293,16 @@ input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-
   <aside class="rail">
     <div class="brand">
       <div class="brand-mark">SM</div>
-      <div><h1>Stage Manager</h1><p>Rehearsal &amp; cue book</p></div>
+      <div><h1>Stage Manager</h1><p data-i18n="Rehearsal & cue book">Rehearsal &amp; cue book</p></div>
     </div>
     <nav id="nav"></nav>
     <div class="rail-foot">
-      <div class="label">Production</div>
+      <div class="label" data-i18n="Production">Production</div>
       <div class="rs-title" id="rail-show">—</div>
       <div class="rail-actions">
-        <button class="mini" data-act="export">Export</button>
-        <button class="mini" data-act="import">Import</button>
-        <button class="mini" data-act="reset">Reset</button>
+        <button class="mini" data-act="export" data-i18n="Export">Export</button>
+        <button class="mini" data-act="import" data-i18n="Import">Import</button>
+        <button class="mini" data-act="reset" data-i18n="Reset">Reset</button>
       </div>
       <input type="file" id="file" accept="application/json" hidden>
     </div>
@@ -305,9 +314,9 @@ input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-
         <div class="tb-title" id="show-title">—</div>
       </div>
       <div class="tb-right">
-        <div class="save" id="save-state"><span class="dot"></span>Saved locally</div>
-        <button class="btn ghost" data-act="print">Print cue sheet</button>
-        <button class="btn primary" data-view="run">Call the show ▸</button>
+        <div class="save" id="save-state"><span class="dot"></span><span id="save-text">Saved locally</span></div>
+        <button class="btn ghost" data-act="print" data-i18n="Print cue sheet">Print cue sheet</button>
+        <button class="btn primary" data-view="run" data-i18n="Call the show ▸">Call the show ▸</button>
       </div>
     </header>
     <main id="view" class="view"></main>
@@ -637,12 +646,11 @@ let S = loadState() || seed();
 const deleteStack = [];
 let lastDeleteAt = 0;
 
+let lastSavedAt = null;
 function persist(){
   try{ localStorage.setItem(LS_KEY, JSON.stringify(S)); }catch(e){}
-  const el = document.getElementById('save-state');
-  if(el){
-    el.innerHTML = '<span class="dot"></span>Saved ' + new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
-  }
+  lastSavedAt = new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+  setSaveLabel();
 }
 function save(){
   /* any later edit makes the delete snapshots unsafe */
@@ -654,7 +662,16 @@ function esc(v){
   return String(v==null?'':v).replace(/[&<>"']/g, m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
 }
 let toastT;
-const pl = (n,w) => n + ' ' + w + (n === 1 ? '' : 's');function toast(msg){
+function pl(n, w){
+  if(UI.lang === 'zh'){
+    const measure = {person:'人', actor:'位演员', track:'条角色线', prop:'个道具', cue:'条提示',
+                     move:'次移动', delete:'次删除', scene:'个场景', act:'幕', item:'项',
+                     entrance:'次入场', call:'条提示'}[w];
+    return n + ' ' + (measure || w);
+  }
+  return n + ' ' + w + (n === 1 ? '' : 's');
+}
+function toast(msg){
   const t = document.getElementById('toast');
   t.textContent = msg; t.classList.add('on');
   clearTimeout(toastT); toastT = setTimeout(()=>t.classList.remove('on'), 2200);
@@ -706,14 +723,15 @@ normalise();
    ================================================================== */
 const NAV = [
   ['overview','Overview'],
-  ['stage','Scenes &amp; Stage'],
+  ['stage','Scenes & Stage'],
   ['cast','Cast'],
   ['props','Props'],
-  ['cues','Sound &amp; Light'],
+  ['cues','Sound & Light'],
   ['cuebook','Cue Sheet'],
-  ['run','Run Show']
+  ['run','Run Show'],
+  ['settings','Settings']
 ];
-let UI = {view:'overview', scene:'s1', propQ:'', propStatus:'all', cueType:'all', runIdx:0, started:null, executed:[]};
+let UI = {view:'overview', scene:'s1', propQ:'', propStatus:'all', cueType:'all', runIdx:0, started:null, executed:[], lang:'en'};
 try{
   const u = JSON.parse(localStorage.getItem(LS_UI)||'null');
   if(u && u.view){
@@ -721,12 +739,306 @@ try{
     UI.started = typeof u.started === 'number' ? u.started : null;
     UI.runIdx = Number.isInteger(u.runIdx) ? u.runIdx : 0;
     UI.executed = Array.isArray(u.executed) ? u.executed : [];
+    UI.lang = u.lang === 'zh' ? 'zh' : 'en';
   }
 }catch(e){}
+UI.lang = UI.lang === 'zh' ? 'zh' : 'en';
+
+/* Interface language. English strings double as dictionary keys; a missing
+   entry falls back to English, so new copy never blocks a release. */
+const ZH = {
+  /* shell */
+  'Rehearsal & cue book': '排练与提示本',
+  'Production': '剧目',
+  'Export': '导出',
+  'Import': '导入',
+  'Reset': '重置',
+  'Print cue sheet': '打印提示表',
+  'Call the show ▸': '开始演出 ▸',
+  'Saved locally': '已保存到本机',
+  'Saved {time}': '已保存 {time}',
+  'Venue TBC': '场地待定',
+  'Date TBC': '日期待定',
+  'Dates TBC': '日期待定',
+  'Untitled production': '未命名剧目',
+  'Production · {venue}': '剧目 · {venue}',
+  'Stage Manager — Rehearsal & Cue Book': 'Stage Manager — 排练与提示本',
+  'Interface language updated.': '界面语言已更新。',
+  /* nav */
+  'Overview': '概览',
+  'Scenes & Stage': '场景与舞台',
+  'Cast': '演员',
+  'Props': '道具',
+  'Sound & Light': '声光',
+  'Cue Sheet': '提示表',
+  'Run Show': '演出执行',
+  'Settings': '设置',
+  /* settings */
+  'Preferences': '偏好设置',
+  'Language': '语言',
+  'Language and display options for this browser. Your show data is not changed.': '此浏览器中的语言与显示选项。剧目数据不会改变。',
+  'Choose the language for buttons, labels and messages. English is the default.': '选择按钮、标签和提示信息的语言。默认英文。',
+  'Default': '默认',
+  'Chinese': '中文',
+  'Current': '当前',
+  'Switch': '切换',
+  'The demo show and any show you import keep their original text. Only the interface changes.': '示例剧目和导入的剧目会保留原文，只切换界面语言。',
+  /* shared labels */
+  'Title': '标题',
+  'Venue': '场地',
+  'Director': '导演',
+  'Run dates': '演出日期',
+  'Notes': '备注',
+  'Add': '添加',
+  'Remove': '移除',
+  'Delete': '删除',
+  'Print': '打印',
+  'Cue': '提示',
+  'Scene': '场景',
+  'Sc.': '场',
+  'In': '入',
+  'Out': '出',
+  'Length': '时长',
+  'Trigger': '触发',
+  'Description': '描述',
+  'Rename act': '重命名幕',
+  'no location': '未设位置',
+  'add note': '添加备注',
+  'no entrances': '无入场',
+  'sc': '场',
+  'not in any scene yet': '还没有分配到场景',
+  /* overview */
+  'Scene {tag} calls for {props} not ready — {names}': '场景 {tag} 有 {props}未就绪 — {names}',
+  'Scene {tag} has nobody placed on stage yet.': '场景 {tag} 还没有人在台上。',
+  'Prop “{name}” is not assigned to any scene.': '道具“{name}”还没有分配到任何场景。',
+  '{role} ({name}) has no entrance — check the scene breakdown.': '{role}（{name}）没有入场——请检查场景分配。',
+  'Scenes': '场景',
+  'min staged': '分钟已排',
+  'Company': '剧团',
+  'doubling': '兼演',
+  'Props tracked': '道具追踪',
+  'need attention': '项需处理',
+  'Cues': '提示',
+  'sound': '声音',
+  'light': '灯光',
+  'prop': '道具',
+  'on stage': '人在台上',
+  'in the wings': '人在侧台',
+  'doubles': '兼演',
+  'Nothing flagged. Props, placements and calls all line up.': '没有异常。道具、走位和出场都对得上。',
+  'Production overview': '剧目概览',
+  'Add a production note in the details card below.': '在下方详情卡里补充剧目说明。',
+  'Directed by {name}': '导演 {name}',
+  'New blank show': '新建空白剧目',
+  'No scenes yet.': '还没有场景。',
+  'Cast calls': '演员出场',
+  'Character · actor': '角色 · 演员',
+  'Flags · {n}': '提醒 · {n}',
+  'Production details': '剧目详情',
+  /* stage */
+  'No scenes yet': '还没有场景',
+  'Add a scene to start blocking it.': '添加一个场景，开始排走位。',
+  'Create the first scene': '创建第一个场景',
+  'ACT {no}': '第 {no} 幕',
+  '+ scene': '+ 场景',
+  'Move to the wings': '移到侧台',
+  'Wings': '侧台',
+  'Nobody on stage yet.': '还没有人在台上。',
+  'Place on stage': '放到台上',
+  'Place': '上台',
+  'Everyone is on stage.': '所有人都在台上。',
+  'Take this prop out of the scene': '从本场景移除道具',
+  'No props called for this scene.': '本场景没有道具。',
+  'Scenes & stage': '场景与舞台',
+  'Duration': '时长',
+  'Copy blocking from…': '复制走位自…',
+  'Clear everyone off stage': '清空台上所有人',
+  'Auto-arrange': '自动排位',
+  'Cue sheet': '提示表',
+  'Delete scene': '删除场景',
+  'Add another act': '添加一幕',
+  'UPSTAGE · BACK WALL': '后区 · 背景墙',
+  'free floor': '空台',
+  'AUDIENCE · AROUND THE ARC': '观众 · 环绕弧区',
+  'Plan view of the half-round floor — back wall at the top, audience around the arc. Drag a circle or a tag anywhere inside the curve; the position saves to this scene. Click a token to select it, nudge with the arrow keys (hold Shift for 5% steps), ⌘/Ctrl Z to undo. Or write a note in Movement directions and let the app walk the blocking for you.': '半圆舞台平面图——背景墙在上，观众环绕弧区。拖动圆圈或标签到弧线内任意位置，位置会保存到本场景。点击标记可选中，用方向键微调（按住 Shift 每次 5%），⌘/Ctrl Z 撤销。也可以在“走位指令”里写一句话，让应用自动走位。',
+  'Scene details': '场景详情',
+  'Synopsis': '剧情简介',
+  'Movement directions': '走位指令',
+  'Run moves': '执行走位',
+  'Undo run': '撤销本轮',
+  'On stage · {n}': '台上 · {n}',
+  'In the wings · {n}': '侧台 · {n}',
+  'Props called · {n}': '本场道具 · {n}',
+  '+ Add a prop to this scene…': '+ 为本场景添加道具…',
+  'Cues · {n}': '提示 · {n}',
+  'No cues logged for this scene.': '本场景还没有提示。',
+  /* cast */
+  'Cast & doubling': '演员与兼演',
+  'Entrances are counted from the scene breakdown — move a character on or off stage and these numbers follow.': '入场次数按场景分配统计——角色上下台后，这些数字会自动更新。',
+  'No cast yet.': '还没有演员。',
+  'Add a track': '添加演员',
+  'Character': '角色',
+  'Actor': '演员',
+  'Notes (optional)': '备注（可选）',
+  /* props */
+  'Ready': '就绪',
+  'In use': '使用中',
+  'Needs work': '待处理',
+  'Missing': '缺失',
+  'Struck': '已撤',
+  'Hand prop': '手持道具',
+  'Set dressing': '布景',
+  'Costume': '服装',
+  'Weapon': '武器',
+  'Consumable': '消耗品',
+  'Furniture': '家具',
+  'Property department': '道具部',
+  'Props & tracking': '道具与追踪',
+  'Search props…': '搜索道具…',
+  'All statuses': '全部状态',
+  'Inventory': '库存',
+  'No props match that filter.': '没有符合筛选条件的道具。',
+  'Add a prop': '添加道具',
+  'Item name': '道具名称',
+  'Location': '位置',
+  '+ add to scene…': '+ 添加到场景…',
+  /* cues */
+  'Sound cues': '声音提示',
+  'Lighting cues': '灯光提示',
+  'Prop cues': '道具提示',
+  'Sound': '声音',
+  'Light': '灯光',
+  'Prop': '道具',
+  'Sound & light': '声光',
+  'Cue library': '提示库',
+  'Every call is logged against a scene. Numbers re-sequence automatically as you add or delete.': '每条提示都挂在场景上。增删后编号会自动重排。',
+  'Cue sheet →': '提示表 →',
+  'Add a cue': '添加提示',
+  'What happens on this cue': '这条提示要做什么',
+  'Add cue': '添加提示',
+  'No cues of this type yet.': '还没有这类提示。',
+  'Standby / GO': '待命 / GO',
+  'Auto-follow': '自动跟随',
+  'Cue on line': '台词提示',
+  'Manual / ad-lib': '手动 / 即兴',
+  /* cue sheet */
+  'Running order': '演出顺序',
+  '{cues} across {scenes} scenes.': '共 {cues}，跨 {scenes} 个场景。',
+  'Hit ▸ to drop into the run at that cue.': '点 ▸ 从这条提示开始执行。',
+  'Start run at cue 01 ▸': '从提示 01 开始 ▸',
+  'Standby / trigger': '待命 / 触发',
+  'No cues yet — add some in Sound & Light.': '还没有提示——先去“声光”里添加。',
+  'Call from this cue': '从这条提示开始',
+  /* run */
+  'No cues to call yet. Add cues in Sound & Light first.': '还没有可执行的提示。请先在“声光”里添加。',
+  'CURTAIN DOWN': '落幕',
+  'END OF SHOW': '演出结束',
+  'All {n} cues called in {time}.': '全部 {n} 条提示已完成，用时 {time}。',
+  'Run it again': '再演一次',
+  'Back to cue sheet': '返回提示表',
+  'SCENE {tag} · {title} · {dur}': '场景 {tag} · {title} · {dur}',
+  'cue {i} of {n}': '第 {i} / {n} 条',
+  'Elapsed': '已用',
+  '→ next {label}': '→ 下一条 {label}',
+  'Back one cue': '上一条',
+  'Leave the run': '退出演出',
+  'SPACE = GO · ESC = LEAVE THE RUN': '空格 = GO · ESC = 退出演出',
+  'Standing by': '待命',
+  'scene {tag}': '场景 {tag}',
+  '{n} to go': '还剩 {n}',
+  'This is the last cue of the show.': '这是演出的最后一条提示。',
+  'On stage · {tag}': '台上 · {tag}',
+  'nobody placed': '无人在场',
+  'Called · {n}': '已执行 · {n}',
+  'Nothing called yet.': '还没有执行任何提示。',
+  /* actions and messages */
+  'Placed on stage — drag the circle where you want it.': '已放到台上——拖动圆圈调整位置。',
+  'Moved to the wings.': '已移到侧台。',
+  'Stage tidied — grab a circle to fine-tune it.': '舞台已整理——拖动圆圈微调。',
+  'Name this act': '给这一幕命名',
+  'Act {no}': '第 {no} 幕',
+  'Act {no} added.': '已添加第 {no} 幕。',
+  'Rename act {no}': '重命名第 {no} 幕',
+  'Act name unchanged.': '幕名未修改。',
+  'Act {no} renamed to “{name}”.': '第 {no} 幕已改名为“{name}”。',
+  'cast member {role}': '演员 {role}',
+  'prop “{name}”': '道具“{name}”',
+  'cue {label}': '提示 {label}',
+  '+ act': '+ 幕',
+  'Scene {no} added — rename it below the stage.': '已添加场景 {no}——在舞台下方改名。',
+  'Reset to the demo show.': '已重置为示例剧目。',
+  'Blank show — add your cast, props and cues.': '空白剧目——开始添加演员、道具和提示。',
+  'Delete scene {scene}? Its cues and placements go with it.': '删除场景 {scene}？其提示和走位会一并删除。',
+  'Scene deleted — ⌘/Ctrl Z to undo.': '场景已删除——按 ⌘/Ctrl Z 撤销。',
+  'Character and actor are both needed.': '角色和演员都要填写。',
+  '{role} added to the company.': '已将 {role} 加入剧团。',
+  'Give the prop a name.': '请填写道具名称。',
+  'Prop added to the inventory.': '道具已加入清单。',
+  'Describe what happens on the cue.': '请描述这条提示的内容。',
+  'Cue added.': '提示已添加。',
+  'Backup downloaded.': '备份已下载。',
+  'Reset everything to the demo production? Your current changes will be lost.': '重置为示例剧目？当前修改会丢失。',
+  'Start a blank production? The current show stays saved until you change it here, and Export makes a backup.': '新建空白剧目？当前剧目会一直保留到你在这里修改；建议先导出备份。',
+  'Remove {role} ({name}) from the company?': '将 {role}（{name}）移出剧团？',
+  '{role} removed — ⌘/Ctrl Z to undo.': '{role} 已移除——按 ⌘/Ctrl Z 撤销。',
+  'Delete prop “{name}”?': '删除道具“{name}”？',
+  'Prop deleted — ⌘/Ctrl Z to undo.': '道具已删除——按 ⌘/Ctrl Z 撤销。',
+  'Delete cue {label}?': '删除提示 {label}？',
+  'Cue deleted — ⌘/Ctrl Z to undo.': '提示已删除——按 ⌘/Ctrl Z 撤销。',
+  'Replace “{old}” with “{new}”? The current show will be overwritten.': '用“{new}”替换“{old}”？当前剧目会被覆盖。',
+  'Production imported.': '剧目已导入。',
+  'That file is not a stage management backup.': '这个文件不是 Stage Manager 备份。',
+  'Stage cleared.': '舞台已清空。',
+  'Blocking copied — adjust from here.': '走位已复制——可继续调整。',
+  'Nothing to restore.': '没有可恢复的删除。',
+  'Restored {label}.': '已恢复 {label}。',
+  'Restored {label} — {n} more deletes to undo.': '已恢复 {label}——还可撤销 {n} 次删除。',
+  'Could not restore that delete.': '无法恢复这次删除。',
+  'Nothing to undo.': '没有可撤销的操作。',
+  'Move undone.': '走位已撤销。',
+  'No moves from Run to undo.': '没有可撤销的执行走位。',
+  '{n} undone.': '{n}已撤销。',
+  'Still moving — give it a second.': '还在移动——请稍等。',
+  'Write a direction first, e.g. “Puck crosses to downstage left”.': '先写一条走位指令，例如“帕克走到左前”。',
+  'Moving…': '移动中…',
+  'Blocking updated — {n}.': '走位已更新——{n}。',
+  'Nothing to move.': '没有可执行的走位。',
+  'no character I recognise': '没有识别到角色',
+  'name a place — “to downstage left”': '请指定位置——例如“到左前”',
+  'Saved data was unreadable — started from the demo. A copy is kept in this browser.': '已保存的数据无法读取——已从示例剧目启动。副本保留在此浏览器中。'
+};
+
+function T(s, vars){
+  let out = (UI.lang === 'zh' && ZH[s] != null) ? ZH[s] : s;
+  if(vars){
+    out = out.replace(/\{(\w+)\}/g, function(_, k){
+      return vars[k] == null ? '' : String(vars[k]);
+    });
+  }
+  return out;
+}
+function localizeStatic(){
+  document.querySelectorAll('[data-i18n]').forEach(el=>{
+    el.textContent = T(el.dataset.i18n);
+  });
+}
+function setSaveLabel(){
+  const el = document.getElementById('save-text');
+  if(!el) return;
+  el.textContent = lastSavedAt ? T('Saved {time}', {time:lastSavedAt}) : T('Saved locally');
+}
+function setLanguage(lang){
+  const next = lang === 'zh' ? 'zh' : 'en';
+  if(next === UI.lang) return;
+  UI.lang = next;
+  saveUI(); render();
+  toast(T('Interface language updated.'));
+}
+
 function saveUI(){
   try{
     localStorage.setItem(LS_UI, JSON.stringify({view:UI.view, scene:UI.scene, runIdx:UI.runIdx,
-                                                started:UI.started, executed:UI.executed}));
+                                                started:UI.started, executed:UI.executed, lang:UI.lang}));
   }catch(e){}
 }
 
@@ -741,18 +1053,22 @@ function go(view, scene){
 
 function renderNav(){
   document.getElementById('nav').innerHTML = NAV.map(([id,label],i)=>
-    `<button class="navbtn ${UI.view===id?'on':''}" data-view="${id}"><span class="n">0${i+1}</span><span class="lab">${label}</span></button>`
+    `<button class="navbtn ${UI.view===id?'on':''}" data-view="${id}"><span class="n">0${i+1}</span><span class="lab">${esc(T(label))}</span></button>`
   ).join('');
 }
 
 function render(){
   const show = S.show;
-  document.getElementById('show-title').textContent = show.title || 'Untitled production';
-  document.getElementById('rail-show').innerHTML = esc(show.title||'—') + '<br><span class="dim2">' + esc(show.dates||'Date TBC') + '</span>';
-  document.getElementById('tb-eyebrow').textContent = 'Production · ' + (show.venue || 'Venue TBC');
+  if(document.documentElement) document.documentElement.lang = UI.lang === 'zh' ? 'zh-CN' : 'en';
+  document.title = T('Stage Manager — Rehearsal & Cue Book');
+  localizeStatic();
+  setSaveLabel();
+  document.getElementById('show-title').textContent = show.title || T('Untitled production');
+  document.getElementById('rail-show').innerHTML = esc(show.title||'—') + '<br><span class="dim2">' + esc(show.dates || T('Date TBC')) + '</span>';
+  document.getElementById('tb-eyebrow').textContent = T('Production · {venue}', {venue: show.venue || T('Venue TBC')});
   renderNav();
   const views = {overview:viewOverview, stage:viewStage, cast:viewCast, props:viewProps,
-                 cues:viewCues, cuebook:viewCueBook, run:viewRun};
+                 cues:viewCues, cuebook:viewCueBook, run:viewRun, settings:viewSettings};
   const v = document.getElementById('view');
   v.innerHTML = (views[UI.view] || viewOverview)();
   if(UI.view === 'stage'){
@@ -766,11 +1082,11 @@ function warnings(){
   const out = [];
   sceneList().forEach(s=>{
     const bad = propsIn(s.id).filter(p=>p.status!=='Ready' && p.status!=='In use');
-    if(bad.length) out.push({scene:s.id, text:`Scene ${sceneTag(s.id)} calls for ${bad.length} prop${bad.length>1?'s':''} not ready — ${bad.map(p=>p.name).join(', ')}`});
-    if(!onStage(s.id).length) out.push({scene:s.id, text:`Scene ${sceneTag(s.id)} has nobody placed on stage yet.`});
+    if(bad.length) out.push({scene:s.id, text:T('Scene {tag} calls for {props} not ready — {names}', {tag:sceneTag(s.id), props:pl(bad.length,'prop'), names:bad.map(p=>p.name).join(', ')})});
+    if(!onStage(s.id).length) out.push({scene:s.id, text:T('Scene {tag} has nobody placed on stage yet.', {tag:sceneTag(s.id)})});
   });
-  S.props.forEach(p=>{ if(!p.scenes.length) out.push({scene:null, text:`Prop “${p.name}” is not assigned to any scene.`}); });
-  S.cast.forEach(c=>{ if(!castScenes(c.id).length) out.push({scene:null, text:`${c.role} (${c.name}) has no entrance — check the scene breakdown.`}); });
+  S.props.forEach(p=>{ if(!p.scenes.length) out.push({scene:null, text:T('Prop “{name}” is not assigned to any scene.', {name:p.name})}); });
+  S.cast.forEach(c=>{ if(!castScenes(c.id).length) out.push({scene:null, text:T('{role} ({name}) has no entrance — check the scene breakdown.', {role:c.role, name:c.name})}); });
   return out;
 }
 
@@ -784,24 +1100,24 @@ function viewOverview(){
 
   const kpis = `
   <div class="kpis">
-    <div class="kpi"><div class="k">Scenes</div><div class="v">${scenes.length}</div><div class="s">${S.acts.length} acts · ${scenes.reduce((n,s)=>n+ (parseInt(s.duration)||0),0)} min staged</div></div>
-    <div class="kpi"><div class="k">Company</div><div class="v">${people}</div><div class="s">${S.cast.length} tracks · ${S.cast.length - people + S.cast.filter(c=>/\/|&/.test(c.role)).length} doubling</div></div>
-    <div class="kpi"><div class="k">Props tracked</div><div class="v">${S.props.length}</div><div class="s">${notReady} need attention</div></div>
-    <div class="kpi"><div class="k">Cues</div><div class="v">${S.cues.length}</div><div class="s">${S.cues.filter(c=>c.type==='SFX').length} sound · ${S.cues.filter(c=>c.type==='LFX').length} light · ${S.cues.filter(c=>c.type==='PROP').length} prop</div></div>
+    <div class="kpi"><div class="k">${T('Scenes')}</div><div class="v">${scenes.length}</div><div class="s">${pl(S.acts.length,'act')} · ${scenes.reduce((n,s)=>n+ (parseInt(s.duration)||0),0)} ${T('min staged')}</div></div>
+    <div class="kpi"><div class="k">${T('Company')}</div><div class="v">${people}</div><div class="s">${pl(S.cast.length,'track')} · ${S.cast.length - people + S.cast.filter(c=>/\/|&/.test(c.role)).length} ${T('doubling')}</div></div>
+    <div class="kpi"><div class="k">${T('Props tracked')}</div><div class="v">${S.props.length}</div><div class="s">${notReady} ${T('need attention')}</div></div>
+    <div class="kpi"><div class="k">${T('Cues')}</div><div class="v">${S.cues.length}</div><div class="s">${T('sound')} ${S.cues.filter(c=>c.type==='SFX').length} · ${T('light')} ${S.cues.filter(c=>c.type==='LFX').length} · ${T('prop')} ${S.cues.filter(c=>c.type==='PROP').length}</div></div>
   </div>`;
 
   const running = scenes.map(s=>{
     const act = S.acts.find(a=>a.id===s.act);
     return `<div class="srow" data-view="stage" data-scene="${s.id}">
       <span class="num">${act.no}.${s.no}</span>
-      <span class="tt"><b>${esc(s.title)}</b><span>${pl(onStage(s.id).length,'person')} on stage · ${pl(propsIn(s.id).length,'prop')} · ${pl(cuesIn(s.id).length,'cue')} · ${esc(s.duration||'—')}</span></span>
+      <span class="tt"><b>${esc(s.title)}</b><span>${onStage(s.id).length} ${T('on stage')} · ${pl(propsIn(s.id).length,'prop')} · ${pl(cuesIn(s.id).length,'cue')} · ${esc(s.duration||'—')}</span></span>
       <span class="dim2" style="font-size:11px">›</span>
     </div>`;
   });
   // insert act headers
   let lastAct = null, orderHTML = '';
   scenes.forEach((s,i)=>{
-    if(s.act!==lastAct){ orderHTML += `<div class="act" data-renameact="${s.act}" title="Rename act">${esc(S.acts.find(a=>a.id===s.act).name)}</div>`; lastAct = s.act; }
+    if(s.act!==lastAct){ orderHTML += `<div class="act" data-renameact="${s.act}" title="${T('Rename act')}">${esc(S.acts.find(a=>a.id===s.act).name)}</div>`; lastAct = s.act; }
     orderHTML += running[i];
   });
 
@@ -810,7 +1126,7 @@ function viewOverview(){
     return `<tr>
       <td style="min-width:0">
         <span class="st"><i style="background:${c.color}"></i><span style="color:var(--text);font-size:12.5px">${esc(c.role)}</span></span>
-        <div class="dim2" style="font-size:10.5px;margin-left:13px">${esc(c.name)}${firstNameCount[c.name]>1?' · doubles':''}</div>
+        <div class="dim2" style="font-size:10.5px;margin-left:13px">${esc(c.name)}${firstNameCount[c.name]>1?' · '+T('doubles'):''}</div>
       </td>
       <td class="mono dim2" style="font-size:11px;text-align:center">${sc.length}</td>
       <td class="mono dim2" style="font-size:10.5px">${sc.length?sceneTag(sc[0].id):'—'}</td>
@@ -819,45 +1135,45 @@ function viewOverview(){
   }).join('');
 
   const warnHTML = issues.length ? issues.map(w=>`<div class="warn"><span class="ic">▲</span><span>${esc(w.text)}</span></div>`).join('')
-    : '<div class="empty">Nothing flagged. Props, placements and calls all line up.</div>';
+    : `<div class="empty">${T('Nothing flagged. Props, placements and calls all line up.')}</div>`;
 
   return `<div class="wrap">
     <div class="pagehead">
       <div>
-        <div class="sec">Production overview</div>
+        <div class="sec">${T('Production overview')}</div>
         <div class="h2">${esc(S.show.title)}</div>
-        <div class="desc">${esc(S.show.notes || 'Add a production note in the details card below.')}</div>
+        <div class="desc">${esc(S.show.notes || T('Add a production note in the details card below.'))}</div>
       </div>
       <div style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap">
         <div class="dim2" style="text-align:right;font-size:11.5px;line-height:1.7;margin-right:4px">
-          ${S.show.director?'Directed by '+esc(S.show.director)+'<br>':''}${esc(S.show.dates||'Dates TBC')}
+          ${S.show.director?T('Directed by {name}', {name:esc(S.show.director)})+'<br>':''}${esc(S.show.dates||T('Dates TBC'))}
         </div>
-        <button class="btn ghost sm" data-act="newshow">New blank show</button>
+        <button class="btn ghost sm" data-act="newshow">${T('New blank show')}</button>
        </div>
     </div>
     ${kpis}
     <div class="cols">
-      <div class="card flush runorder">${orderHTML || '<div class="empty">No scenes yet.</div>'}</div>
+      <div class="card flush runorder">${orderHTML || `<div class="empty">${T('No scenes yet.')}</div>`}</div>
       <div>
         <div class="card flush" style="margin-bottom:14px">
-          <div style="padding:16px 16px 4px"><div class="sec">Cast calls</div></div>
-          <table class="tbl" style="table-layout:fixed"><thead><tr><th style="width:44%">Character · actor</th><th style="width:16%;text-align:center">Sc.</th><th style="width:20%">In</th><th style="width:20%">Out</th></tr></thead>
+          <div style="padding:16px 16px 4px"><div class="sec">${T('Cast calls')}</div></div>
+          <table class="tbl" style="table-layout:fixed"><thead><tr><th style="width:44%">${T('Character · actor')}</th><th style="width:16%;text-align:center">${T('Sc.')}</th><th style="width:20%">${T('In')}</th><th style="width:20%">${T('Out')}</th></tr></thead>
           <tbody>${calls}</tbody></table>
         </div>
         <div class="card">
-          <div class="sec">Flags · ${issues.length}</div>
+          <div class="sec">${T('Flags · {n}', {n:issues.length})}</div>
           ${warnHTML}
         </div>
       </div>
     </div>
     <div class="card" style="margin-top:14px">
-      <div class="sec">Production details</div>
+      <div class="sec">${T('Production details')}</div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-        <div><label class="sec" style="margin:0 0 5px">Title</label><input class="inp" data-k="show" data-f="title" value="${esc(S.show.title)}"></div>
-        <div><label class="sec" style="margin:0 0 5px">Venue</label><input class="inp" data-k="show" data-f="venue" value="${esc(S.show.venue)}"></div>
-        <div><label class="sec" style="margin:0 0 5px">Director</label><input class="inp" data-k="show" data-f="director" value="${esc(S.show.director)}"></div>
-        <div><label class="sec" style="margin:0 0 5px">Run dates</label><input class="inp" data-k="show" data-f="dates" value="${esc(S.show.dates)}"></div>
-        <div style="grid-column:1/-1"><label class="sec" style="margin:0 0 5px">Notes</label><textarea class="ta" data-k="show" data-f="notes">${esc(S.show.notes)}</textarea></div>
+        <div><label class="sec" style="margin:0 0 5px">${T('Title')}</label><input class="inp" data-k="show" data-f="title" value="${esc(S.show.title)}"></div>
+        <div><label class="sec" style="margin:0 0 5px">${T('Venue')}</label><input class="inp" data-k="show" data-f="venue" value="${esc(S.show.venue)}"></div>
+        <div><label class="sec" style="margin:0 0 5px">${T('Director')}</label><input class="inp" data-k="show" data-f="director" value="${esc(S.show.director)}"></div>
+        <div><label class="sec" style="margin:0 0 5px">${T('Run dates')}</label><input class="inp" data-k="show" data-f="dates" value="${esc(S.show.dates)}"></div>
+        <div style="grid-column:1/-1"><label class="sec" style="margin:0 0 5px">${T('Notes')}</label><textarea class="ta" data-k="show" data-f="notes">${esc(S.show.notes)}</textarea></div>
       </div>
     </div>
   </div>`;
@@ -881,9 +1197,9 @@ function viewStage(){
   const scenes = sceneList();
   if(!sceneOf(UI.scene)) UI.scene = scenes[0] ? scenes[0].id : null;
   if(!UI.scene) return `<div class="wrap"><div class="card" style="text-align:center;padding:56px 20px">
-    <div class="h2">No scenes yet</div>
-    <div class="dim" style="font-size:13px;margin:10px 0 20px">Add a scene to start blocking it.</div>
-    <button class="btn primary" data-addscene="${S.acts[0]?S.acts[0].id:''}">Create the first scene</button>
+    <div class="h2">${T('No scenes yet')}</div>
+    <div class="dim" style="font-size:13px;margin:10px 0 20px">${T('Add a scene to start blocking it.')}</div>
+    <button class="btn primary" data-addscene="${S.acts[0]?S.acts[0].id:''}">${T('Create the first scene')}</button>
   </div></div>`;
 
   const sc = sceneOf(UI.scene);
@@ -893,113 +1209,119 @@ function viewStage(){
   const sceneProps = propsIn(UI.scene);
   const availProps = S.props.filter(pr=>!pr.scenes.includes(UI.scene));
   const sceneCues = cuesIn(UI.scene);
+  const dirChips = UI.lang === 'zh'
+    ? [['Gerda 走到左前','左前'], ['Kay 走到右后','右后'], ['所有人回位','回位']]
+    : [['Puck crosses to downstage left','cross DS left'], ['Puck crosses to upstage right','cross US right'], ['Everybody to marks','to marks']];
+  const dirPlaceholder = UI.lang === 'zh'
+    ? '角色名 走到左前&#10;角色名 和 角色名 到中间&#10;所有人回位&#10;角色名 退场'
+    : 'Puck crosses to downstage left&#10;Titania and Bottom to centre&#10;Everyone to marks&#10;Theseus exits';
 
   const tabs = S.acts.map(a=>{
     const inAct = scenes.filter(x=>x.act===a.id);
-    const label = 'ACT ' + a.no + (a.name && a.name !== 'Act ' + a.no ? ' · ' + a.name : '');
-    return `<div class="actcol"><button class="actlab" data-renameact="${a.id}" title="Rename act">${esc(label)}</button>${inAct.map(x=>
+    const base = T('Act {no}', {no:a.no});
+    const isDefaultName = a.name === base || a.name === ('Act ' + a.no) || a.name === ('第 ' + a.no + ' 幕');
+    const label = T('ACT {no}', {no:a.no}) + (a.name && !isDefaultName ? ' · ' + a.name : '');
+    return `<div class="actcol"><button class="actlab" data-renameact="${a.id}" title="${T('Rename act')}">${esc(label)}</button>${inAct.map(x=>
       `<button class="stab ${x.id===UI.scene?'on':''}" data-view="stage" data-scene="${x.id}">${x.no}. ${esc(x.title)}</button>`).join('')}
-      <button class="stab plus" data-addscene="${a.id}">+ scene</button></div>`;
+      <button class="stab plus" data-addscene="${a.id}">${T('+ scene')}</button></div>`;
   }).join('');
 
   const panelPlaced = placed.slice().sort((a,b)=>a.cast.role.localeCompare(b.cast.role)).map(p=>`<div class="sp-row">
       <span class="sp-dot" style="--c:${p.cast.color}">${initials(p.cast.name)}</span>
       <div class="sp-main"><b>${esc(p.cast.role)}</b><span>${esc(p.cast.name)}</span></div>
-      <button class="sp-btn" data-send="${p.cast.id}" title="Move to the wings">Wings</button>
-    </div>`).join('') || '<div class="empty" style="padding:16px 0">Nobody on stage yet.</div>';
+      <button class="sp-btn" data-send="${p.cast.id}" title="${T('Move to the wings')}">${T('Wings')}</button>
+    </div>`).join('') || `<div class="empty" style="padding:16px 0">${T('Nobody on stage yet.')}</div>`;
 
   const panelWings = wings.map(c=>`<div class="sp-row">
       <span class="sp-dot" style="--c:${c.color};opacity:.5">${initials(c.name)}</span>
       <div class="sp-main"><b>${esc(c.role)}</b><span>${esc(c.name)}</span></div>
-      <button class="sp-btn solid" data-place="${c.id}" title="Place on stage">Place</button>
-    </div>`).join('') || '<div class="empty" style="padding:16px 0">Everyone is on stage.</div>';
+      <button class="sp-btn solid" data-place="${c.id}" title="${T('Place on stage')}">${T('Place')}</button>
+    </div>`).join('') || `<div class="empty" style="padding:16px 0">${T('Everyone is on stage.')}</div>`;
 
   const propRows = sceneProps.map(pr=>`<div class="sp-row">
       <span class="sp-dot" style="--c:#9a8a6e;border-radius:7px">${pr.qty}</span>
-      <div class="sp-main"><b>${esc(pr.name)}</b><span>${esc(pr.loc||'no location')}</span></div>
-      <button class="sp-btn" data-rmprop="${pr.id}" title="Take this prop out of the scene">×</button>
-    </div>`).join('') || '<div class="empty" style="padding:16px 0">No props called for this scene.</div>';
+      <div class="sp-main"><b>${esc(pr.name)}</b><span>${esc(pr.loc||T('no location'))}</span></div>
+      <button class="sp-btn" data-rmprop="${pr.id}" title="${T('Take this prop out of the scene')}">×</button>
+    </div>`).join('') || `<div class="empty" style="padding:16px 0">${T('No props called for this scene.')}</div>`;
 
   return `<div class="wrap">
     <div class="pagehead">
       <div>
-        <div class="sec">Scenes &amp; stage</div>
+        <div class="sec">${T('Scenes & stage')}</div>
         <div class="h2">${esc(sc.title)}</div>
-        <div class="desc">${placed.length} on stage · ${wings.length} in the wings · ${sceneProps.length} props · ${sceneCues.length} cues</div>
+        <div class="desc">${placed.length} ${T('on stage')} · ${wings.length} ${T('in the wings')} · ${pl(sceneProps.length,'prop')} · ${pl(sceneCues.length,'cue')}</div>
       </div>
       <div style="display:flex;gap:9px;align-items:flex-end;flex-wrap:wrap">
-        <div><label class="sec" style="margin:0 0 6px">Duration</label><input class="inp" style="width:112px" data-k="scene" data-i="${sc.id}" data-f="duration" value="${esc(sc.duration||'')}"></div>
+        <div><label class="sec" style="margin:0 0 6px">${T('Duration')}</label><input class="inp" style="width:112px" data-k="scene" data-i="${sc.id}" data-f="duration" value="${esc(sc.duration||'')}"></div>
         <select class="sel" style="width:198px" data-copyfrom="${sc.id}">
-          <option value="">Copy blocking from…</option>
+          <option value="">${T('Copy blocking from…')}</option>
           ${scenes.filter(x=>x.id!==sc.id).map(x=>`<option value="${x.id}">${sceneTag(x.id)} · ${esc(x.title)}</option>`).join('')}
-          <option value="__clear">Clear everyone off stage</option>
+          <option value="__clear">${T('Clear everyone off stage')}</option>
         </select>
-        <button class="btn" data-act="autoarrange">Auto-arrange</button>
-        <button class="btn" data-view="cuebook">Cue sheet</button>
-        <button class="btn ghost danger" data-delscene="${sc.id}">Delete scene</button>
+        <button class="btn" data-act="autoarrange">${T('Auto-arrange')}</button>
+        <button class="btn" data-view="cuebook">${T('Cue sheet')}</button>
+        <button class="btn ghost danger" data-delscene="${sc.id}">${T('Delete scene')}</button>
       </div>
     </div>
 
     <div class="tabsbar">
       <div class="scenetabs">${tabs}</div>
-      <button class="stab plus tabsadd" data-addact="1" title="Add another act">+ act</button>
+      <button class="stab plus tabsadd" data-addact="1" title="${T('Add another act')}">${T('+ act')}</button>
     </div>
 
     <div class="scene-detail">
       <div>
         <div class="stage-frame">
-          <div class="stage-band"><span>UPSTAGE · BACK WALL</span><span class="stage-readout" id="stage-readout">free floor</span></div>
+          <div class="stage-band"><span>${T('UPSTAGE · BACK WALL')}</span><span class="stage-readout" id="stage-readout">${T('free floor')}</span></div>
           <div class="stage-canvas" id="stage-canvas">${placed.map(tokCast).join('')}${marks.map(tokProp).join('')}</div>
-          <div class="stage-band">AUDIENCE · AROUND THE ARC</div>
+          <div class="stage-band">${T('AUDIENCE · AROUND THE ARC')}</div>
         </div>
-        <div class="stage-hint">Plan view of the half-round floor — back wall at the top, audience around the arc. Drag a circle or a tag anywhere inside the curve; the position saves to this scene. Click a token to select it, nudge with the arrow keys (hold Shift for 5% steps), ⌘/Ctrl Z to undo. Or write a note in Movement directions and let the app walk the blocking for you.</div>
+        <div class="stage-hint">${T('Plan view of the half-round floor — back wall at the top, audience around the arc. Drag a circle or a tag anywhere inside the curve; the position saves to this scene. Click a token to select it, nudge with the arrow keys (hold Shift for 5% steps), ⌘/Ctrl Z to undo. Or write a note in Movement directions and let the app walk the blocking for you.')}</div>
 
         <div class="card" style="margin-top:20px">
-          <div class="sec">Scene details</div>
+          <div class="sec">${T('Scene details')}</div>
           <div style="display:grid;gap:14px">
-            <div><label class="sec" style="margin:0 0 6px">Title</label><input class="inp" data-k="scene" data-i="${sc.id}" data-f="title" value="${esc(sc.title)}"></div>
-            <div><label class="sec" style="margin:0 0 6px">Synopsis</label><textarea class="ta" data-k="scene" data-i="${sc.id}" data-f="synopsis">${esc(sc.synopsis||'')}</textarea></div>
+            <div><label class="sec" style="margin:0 0 6px">${T('Title')}</label><input class="inp" data-k="scene" data-i="${sc.id}" data-f="title" value="${esc(sc.title)}"></div>
+            <div><label class="sec" style="margin:0 0 6px">${T('Synopsis')}</label><textarea class="ta" data-k="scene" data-i="${sc.id}" data-f="synopsis">${esc(sc.synopsis||'')}</textarea></div>
           </div>
         </div>
       </div>
 
       <div class="side">
         <div class="card">
-          <div class="sec">Movement directions</div>
-          <textarea class="ta dirbox" id="dir-input" placeholder="Puck crosses to downstage left&#10;Titania and Bottom to centre&#10;Everyone to marks&#10;Theseus exits">${esc(UI.dirText||'')}</textarea>
+          <div class="sec">${T('Movement directions')}</div>
+          <textarea class="ta dirbox" id="dir-input" placeholder="${dirPlaceholder}">${esc(UI.dirText||'')}</textarea>
           <div class="dirbar">
-            <button class="btn primary sm" data-act="runmove">Run moves</button>
-            <button class="btn sm" data-act="undorun">Undo run</button>
+            <button class="btn primary sm" data-act="runmove">${T('Run moves')}</button>
+            <button class="btn sm" data-act="undorun">${T('Undo run')}</button>
           </div>
           <div class="dirchips">
-            <button class="dirchip" data-dirfill="Puck crosses to downstage left">cross DS left</button>
-            <button class="dirchip" data-dirfill="Puck crosses to upstage right">cross US right</button>
-            <button class="dirchip" data-dirfill="Everybody to marks">to marks</button>
+            ${dirChips.map(([fill,label])=>`<button class="dirchip" data-dirfill="${fill}">${label}</button>`).join('')}
           </div>
           <div class="dirout" id="dir-out"></div>
         </div>
         <div class="card">
-          <div class="sec">On stage · ${placed.length}</div>
+          <div class="sec">${T('On stage · {n}', {n:placed.length})}</div>
           ${panelPlaced}
         </div>
         <div class="card">
-          <div class="sec">In the wings · ${wings.length}</div>
+          <div class="sec">${T('In the wings · {n}', {n:wings.length})}</div>
           ${panelWings}
         </div>
         <div class="card">
-          <div class="sec">Props called · ${sceneProps.length}</div>
+          <div class="sec">${T('Props called · {n}', {n:sceneProps.length})}</div>
           ${propRows}
           ${availProps.length?`<select class="sel" style="margin-top:14px" data-addprop="${sc.id}">
-            <option value="">+ Add a prop to this scene…</option>
-            ${availProps.map(pr=>`<option value="${pr.id}">${esc(pr.name)} — ${esc(pr.status)}</option>`).join('')}
+            <option value="">${T('+ Add a prop to this scene…')}</option>
+            ${availProps.map(pr=>`<option value="${pr.id}">${esc(pr.name)} — ${T(pr.status)}</option>`).join('')}
           </select>`:''}
         </div>
         <div class="card">
-          <div class="sec">Cues · ${sceneCues.length}</div>
+          <div class="sec">${T('Cues · {n}', {n:sceneCues.length})}</div>
           ${sceneCues.length ? sceneCues.map(c=>`<div class="cue-mini">
             <span class="no">${cueLabel(c)}</span>
-            <span class="tx">${esc(c.desc)}<br><span class="dim2" style="font-size:10.5px">${esc(c.trig)} · ${esc(c.dur||'—')}</span></span>
-          </div>`).join('') : '<div class="empty" style="padding:16px 0">No cues logged for this scene.</div>'}
+            <span class="tx">${esc(c.desc)}<br><span class="dim2" style="font-size:10.5px">${T(c.trig)} · ${esc(c.dur||'—')}</span></span>
+          </div>`).join('') : `<div class="empty" style="padding:16px 0">${T('No cues logged for this scene.')}</div>`}
         </div>
       </div>
     </div>
@@ -1019,29 +1341,29 @@ function viewCast(){
       <span class="st" style="flex:0 0 8px"><i style="background:${c.color}"></i></span>
       <input class="inp flat cr-role" data-k="cast" data-i="${c.id}" data-f="role" value="${esc(c.role)}">
       <input class="inp flat cr-name" data-k="cast" data-i="${c.id}" data-f="name" value="${esc(c.name)}">
-      <div class="cr-scenes" title="${esc(sc.map(x=>sceneTag(x.id)+' '+x.title).join(' / '))}">${sc.length ? sc.map(x=>sceneTag(x.id)).join(' · ') : 'no entrances'}</div>
-      <input class="inp flat cr-notes" data-k="cast" data-i="${c.id}" data-f="notes" value="${esc(c.notes||'')}" placeholder="add note">
-      <span class="cr-count">${String(sc.length).padStart(2,'0')} sc</span>
-      <button class="btn sm ghost danger" data-delcast="${c.id}" title="Remove">×</button>
+      <div class="cr-scenes" title="${esc(sc.map(x=>sceneTag(x.id)+' '+x.title).join(' / '))}">${sc.length ? sc.map(x=>sceneTag(x.id)).join(' · ') : T('no entrances')}</div>
+      <input class="inp flat cr-notes" data-k="cast" data-i="${c.id}" data-f="notes" value="${esc(c.notes||'')}" placeholder="${T('add note')}">
+      <span class="cr-count">${String(sc.length).padStart(2,'0')} ${T('sc')}</span>
+      <button class="btn sm ghost danger" data-delcast="${c.id}" title="${T('Remove')}">×</button>
     </div>`;
   }).join('');
 
   return `<div class="wrap">
     <div class="pagehead">
-      <div><div class="sec">Company</div><div class="h2">Cast &amp; doubling</div>
-      <div class="desc">Entrances are counted from the scene breakdown — move a character on or off stage and these numbers follow.</div></div>
+      <div><div class="sec">${T('Company')}</div><div class="h2">${T('Cast & doubling')}</div>
+      <div class="desc">${T('Entrances are counted from the scene breakdown — move a character on or off stage and these numbers follow.')}</div></div>
     </div>
     <div class="card flush">
-      <div style="padding:14px 16px 2px"><span class="sec" style="margin:0">Company · ${people} actors · ${S.cast.length} tracks</span></div>
-      ${rows || '<div class="empty">No cast yet.</div>'}
+      <div style="padding:14px 16px 2px"><span class="sec" style="margin:0">${T('Company')} · ${pl(people,'actor')} · ${pl(S.cast.length,'track')}</span></div>
+      ${rows || `<div class="empty">${T('No cast yet.')}</div>`}
     </div>
     <div class="card" style="margin-top:14px">
-      <div class="sec">Add a track</div>
+      <div class="sec">${T('Add a track')}</div>
       <div style="display:flex;gap:10px;flex-wrap:wrap">
-        <input class="inp" id="nc-role" placeholder="Character" style="flex:1;min-width:140px">
-        <input class="inp" id="nc-name" placeholder="Actor" style="flex:1;min-width:140px">
-        <input class="inp" id="nc-notes" placeholder="Notes (optional)" style="flex:1;min-width:140px">
-        <button class="btn primary" data-act="addcast">Add</button>
+        <input class="inp" id="nc-role" placeholder="${T('Character')}" style="flex:1;min-width:140px">
+        <input class="inp" id="nc-name" placeholder="${T('Actor')}" style="flex:1;min-width:140px">
+        <input class="inp" id="nc-notes" placeholder="${T('Notes (optional)')}" style="flex:1;min-width:140px">
+        <button class="btn primary" data-act="addcast">${T('Add')}</button>
       </div>
     </div>
   </div>`;
@@ -1052,7 +1374,8 @@ function viewCast(){
    ================================================================== */
 function viewProps(){
   const statuses = ['Ready','In use','Needs work','Missing','Struck'];
-  const counts = statuses.map(st=>`${st}: ${S.props.filter(p=>p.status===st).length}`).join(' · ');
+  const cats = ['Hand prop','Set dressing','Costume','Weapon','Consumable','Furniture'];
+  const counts = statuses.map(st=>`${T(st)}: ${S.props.filter(p=>p.status===st).length}`).join(' · ');
   const q = UI.propQ.toLowerCase();
   const rows = S.props
     .filter(p=> UI.propStatus==='all' || p.status===UI.propStatus)
@@ -1062,22 +1385,22 @@ function viewProps(){
         <span class="st"><i style="background:${STATUS_COLOR[p.status]||'var(--dim)'}"></i></span>
         <input class="inp flat pr-name" data-k="prop" data-i="${p.id}" data-f="name" value="${esc(p.name)}">
         <select class="sel sm pr-status" data-k="prop" data-i="${p.id}" data-f="status" data-rerender>
-          ${statuses.map(s=>`<option ${p.status===s?'selected':''}>${s}</option>`).join('')}
+          ${statuses.map(s=>`<option value="${s}" ${p.status===s?'selected':''}>${T(s)}</option>`).join('')}
         </select>
-        <button class="btn sm ghost danger" data-delprop="${p.id}" title="Delete">×</button>
+        <button class="btn sm ghost danger" data-delprop="${p.id}" title="${T('Delete')}">×</button>
       </div>
       <div class="pr-line">
         <select class="sel sm pr-cat" data-k="prop" data-i="${p.id}" data-f="cat" data-rerender>
-          ${['Hand prop','Set dressing','Costume','Weapon','Consumable','Furniture'].map(c=>`<option ${p.cat===c?'selected':''}>${c}</option>`).join('')}
+          ${cats.map(c=>`<option value="${c}" ${p.cat===c?'selected':''}>${T(c)}</option>`).join('')}
         </select>
         <input class="inp flat sm pr-qty" type="number" min="0" data-k="prop" data-i="${p.id}" data-f="qty" value="${p.qty}">
-        <input class="inp sm pr-loc" data-k="prop" data-i="${p.id}" data-f="loc" value="${esc(p.loc||'')}" placeholder="Location">
-        <input class="inp sm pr-notes" data-k="prop" data-i="${p.id}" data-f="notes" value="${esc(p.notes||'')}" placeholder="Notes">
+        <input class="inp sm pr-loc" data-k="prop" data-i="${p.id}" data-f="loc" value="${esc(p.loc||'')}" placeholder="${T('Location')}">
+        <input class="inp sm pr-notes" data-k="prop" data-i="${p.id}" data-f="notes" value="${esc(p.notes||'')}" placeholder="${T('Notes')}">
       </div>
       <div class="pr-line">
-        <div class="pillrow" style="flex:1">${p.scenes.map(s=>`<span class="chip">${sceneTag(s)}<span class="x" data-rmpropscene="${p.id}|${s}" title="Remove">×</span></span>`).join('') || '<span class="dim2" style="font-size:11px">not in any scene yet</span>'}</div>
+        <div class="pillrow" style="flex:1">${p.scenes.map(s=>`<span class="chip">${sceneTag(s)}<span class="x" data-rmpropscene="${p.id}|${s}" title="${T('Remove')}">×</span></span>`).join('') || `<span class="dim2" style="font-size:11px">${T('not in any scene yet')}</span>`}</div>
         <select class="sel sm pr-add" data-addpropscene="${p.id}">
-          <option value="">+ add to scene…</option>
+          <option value="">${T('+ add to scene…')}</option>
           ${sceneList().filter(s=>!p.scenes.includes(s.id)).map(s=>`<option value="${s.id}">${sceneTag(s.id)} ${esc(s.title)}</option>`).join('')}
         </select>
       </div>
@@ -1085,31 +1408,31 @@ function viewProps(){
 
   return `<div class="wrap">
     <div class="pagehead">
-      <div><div class="sec">Property department</div><div class="h2">Props &amp; tracking</div>
+      <div><div class="sec">${T('Property department')}</div><div class="h2">${T('Props & tracking')}</div>
       <div class="desc">${counts}</div></div>
       <div style="display:flex;gap:8px">
-        <input class="inp" id="prop-q" placeholder="Search props…" value="${esc(UI.propQ)}" style="width:170px">
+        <input class="inp" id="prop-q" placeholder="${T('Search props…')}" value="${esc(UI.propQ)}" style="width:170px">
         <select class="sel" id="prop-status" style="width:140px">
-          <option value="all" ${UI.propStatus==='all'?'selected':''}>All statuses</option>
-          ${statuses.map(s=>`<option value="${s}" ${UI.propStatus===s?'selected':''}>${s}</option>`).join('')}
+          <option value="all" ${UI.propStatus==='all'?'selected':''}>${T('All statuses')}</option>
+          ${statuses.map(s=>`<option value="${s}" ${UI.propStatus===s?'selected':''}>${T(s)}</option>`).join('')}
         </select>
       </div>
     </div>
     <div class="card flush">
-      <div style="padding:14px 16px 2px"><span class="sec" style="margin:0">Inventory · ${S.props.length} items</span></div>
-      ${rows || '<div class="empty">No props match that filter.</div>'}
+      <div style="padding:14px 16px 2px"><span class="sec" style="margin:0">${T('Inventory')} · ${pl(S.props.length,'item')}</span></div>
+      ${rows || `<div class="empty">${T('No props match that filter.')}</div>`}
     </div>
     <div class="card" style="margin-top:14px">
-      <div class="sec">Add a prop</div>
+      <div class="sec">${T('Add a prop')}</div>
       <div style="display:flex;gap:10px;flex-wrap:wrap">
-        <input class="inp" id="np-name" placeholder="Item name" style="flex:2;min-width:160px">
+        <input class="inp" id="np-name" placeholder="${T('Item name')}" style="flex:2;min-width:160px">
         <select class="sel" id="np-cat" style="flex:1;min-width:120px">
-          ${['Hand prop','Set dressing','Costume','Weapon','Consumable','Furniture'].map(c=>`<option>${c}</option>`).join('')}
+          ${cats.map(c=>`<option value="${c}">${T(c)}</option>`).join('')}
         </select>
         <input class="inp" id="np-qty" type="number" value="1" min="0" style="width:70px">
-        <select class="sel" id="np-status" style="width:130px">${statuses.map(s=>`<option>${s}</option>`).join('')}</select>
-        <input class="inp" id="np-loc" placeholder="Location" style="flex:1;min-width:140px">
-        <button class="btn primary" data-act="addprop">Add</button>
+        <select class="sel" id="np-status" style="width:130px">${statuses.map(s=>`<option value="${s}">${T(s)}</option>`).join('')}</select>
+        <input class="inp" id="np-loc" placeholder="${T('Location')}" style="flex:1;min-width:140px">
+        <button class="btn primary" data-act="addprop">${T('Add')}</button>
       </div>
     </div>
   </div>`;
@@ -1124,7 +1447,7 @@ function cueRow(c){
     <td style="width:96px;font-size:11.5px" class="mono dim">${sceneTag(c.scene)}</td>
     <td style="min-width:260px"><input class="inp flat" data-k="cue" data-i="${c.id}" data-f="desc" value="${esc(c.desc)}"></td>
     <td style="width:150px"><select class="sel" data-k="cue" data-i="${c.id}" data-f="trig" data-rerender>
-      ${TRIGGERS.map(t=>`<option ${c.trig===t?'selected':''}>${t}</option>`).join('')}
+      ${TRIGGERS.map(t=>`<option value="${t}" ${c.trig===t?'selected':''}>${T(t)}</option>`).join('')}
     </select></td>
     <td style="width:78px"><input class="inp flat mono" data-k="cue" data-i="${c.id}" data-f="dur" value="${esc(c.dur||'')}" placeholder="—"></td>
     <td style="width:34px"><button class="btn sm ghost danger" data-delcue="${c.id}">×</button></td>
@@ -1137,30 +1460,30 @@ function viewCues(){
     const list = cueList().filter(c=>c.type===type);
     return `<div class="card flush" style="margin-bottom:14px">
       <div style="padding:16px 16px 10px;display:flex;align-items:center;justify-content:space-between">
-        <div><div class="sec" style="margin:0">${label}</div><div class="dim2" style="font-size:11px;margin-top:3px">${list.length} cue${list.length===1?'':'s'}</div></div>
+        <div><div class="sec" style="margin:0">${T(label)}</div><div class="dim2" style="font-size:11px;margin-top:3px">${pl(list.length,'cue')}</div></div>
         <span class="badge ${TYPES[type].cls}">${TYPES[type].pfx}</span>
       </div>
-      ${list.length?`<table class="tbl"><thead><tr><th>Cue</th><th>Scene</th><th>Description</th><th>Trigger</th><th>Length</th><th></th></tr></thead>
-        <tbody>${list.map(cueRow).join('')}</tbody></table>`:'<div class="empty">No cues of this type yet.</div>'}
+      ${list.length?`<table class="tbl"><thead><tr><th>${T('Cue')}</th><th>${T('Scene')}</th><th>${T('Description')}</th><th>${T('Trigger')}</th><th>${T('Length')}</th><th></th></tr></thead>
+        <tbody>${list.map(cueRow).join('')}</tbody></table>`:`<div class="empty">${T('No cues of this type yet.')}</div>`}
     </div>`;
   }).join('');
 
   return `<div class="wrap">
     <div class="pagehead">
-      <div><div class="sec">Sound &amp; light</div><div class="h2">Cue library</div>
-      <div class="desc">Every call is logged against a scene. Numbers re-sequence automatically as you add or delete.</div></div>
-      <button class="btn" data-view="cuebook">Cue sheet →</button>
+      <div><div class="sec">${T('Sound & light')}</div><div class="h2">${T('Cue library')}</div>
+      <div class="desc">${T('Every call is logged against a scene. Numbers re-sequence automatically as you add or delete.')}</div></div>
+      <button class="btn" data-view="cuebook">${T('Cue sheet →')}</button>
     </div>
     ${body}
     <div class="card">
-      <div class="sec">Add a cue</div>
+      <div class="sec">${T('Add a cue')}</div>
       <div style="display:flex;gap:10px;flex-wrap:wrap">
-        <select class="sel" id="ncq-type" style="width:120px"><option value="SFX">SFX</option><option value="LFX">LFX</option><option value="PROP">Prop</option></select>
+        <select class="sel" id="ncq-type" style="width:120px"><option value="SFX">${T('Sound')}</option><option value="LFX">${T('Light')}</option><option value="PROP">${T('Prop')}</option></select>
         <select class="sel" id="ncq-scene" style="width:220px">${sceneList().map(s=>`<option value="${s.id}">${sceneTag(s.id)} · ${esc(s.title)}</option>`).join('')}</select>
-        <input class="inp" id="ncq-desc" placeholder="What happens on this cue" style="flex:1;min-width:220px">
-        <select class="sel" id="ncq-trig" style="width:170px">${TRIGGERS.map(t=>`<option>${t}</option>`).join('')}</select>
-        <input class="inp" id="ncq-dur" placeholder="Length" style="width:90px">
-        <button class="btn primary" data-act="addcue">Add cue</button>
+        <input class="inp" id="ncq-desc" placeholder="${T('What happens on this cue')}" style="flex:1;min-width:220px">
+        <select class="sel" id="ncq-trig" style="width:170px">${TRIGGERS.map(t=>`<option value="${t}">${T(t)}</option>`).join('')}</select>
+        <input class="inp" id="ncq-dur" placeholder="${T('Length')}" style="width:90px">
+        <button class="btn primary" data-act="addcue">${T('Add cue')}</button>
       </div>
     </div>
   </div>`;
@@ -1183,26 +1506,26 @@ function viewCueBook(){
       <td style="width:60px" class="mono dim2">${sceneTag(c.scene)}</td>
       <td style="min-width:280px">${first?'<div class="cue-print-scene">'+sceneTag(c.scene)+' · '+esc(sceneTitle(c.scene))+' — '+esc((sceneOf(c.scene)||{}).duration||'')+'</div>':''}<div style="font-size:13px;line-height:1.4">${esc(c.desc)}</div>
         ${c.note?`<div class="dim2" style="font-size:10.5px;margin-top:2px">${esc(c.note)}</div>`:''}</td>
-      <td style="width:130px" class="dim" >${esc(c.trig)}</td>
+      <td style="width:130px" class="dim" >${T(c.trig)}</td>
       <td style="width:64px" class="mono dim2">${esc(c.dur||'—')}</td>
       <td style="width:52px" class="mono dim2">${String(i+1).padStart(2,'0')}/${S.cues.length}</td>
-      <td style="width:56px"><button class="btn sm ghost" data-jump="${i}" title="Call from this cue">▸</button></td>
+      <td style="width:56px"><button class="btn sm ghost" data-jump="${i}" title="${T('Call from this cue')}">▸</button></td>
     </tr>`;
   }).join('');
 
   return `<div class="wrap">
     <div class="pagehead">
-      <div><div class="sec">Cue sheet</div><div class="h2">Running order</div>
-      <div class="desc">${S.cues.length} cues across ${new Set(S.cues.map(c=>c.scene)).size} scenes.<span class="screen-only"> Hit ▸ to drop into the run at that cue.</span></div></div>
+      <div><div class="sec">${T('Cue sheet')}</div><div class="h2">${T('Running order')}</div>
+      <div class="desc">${T('{cues} across {scenes} scenes.', {cues:pl(S.cues.length,'cue'), scenes:new Set(S.cues.map(c=>c.scene)).size})}<span class="screen-only"> ${T('Hit ▸ to drop into the run at that cue.')}</span></div></div>
       <div style="display:flex;gap:8px">
-        <button class="btn ghost" data-act="print">Print</button>
-        <button class="btn primary" data-act="startrun">Start run at cue 01 ▸</button>
+        <button class="btn ghost" data-act="print">${T('Print')}</button>
+        <button class="btn primary" data-act="startrun">${T('Start run at cue 01 ▸')}</button>
       </div>
     </div>
     <div class="card flush">
       <table class="tbl cuebook-tbl">
-        <thead><tr><th>Cue</th><th>Sc.</th><th>Description</th><th>Standby / trigger</th><th>Length</th><th>#</th><th></th></tr></thead>
-        <tbody>${rows || '<tr><td colspan="7" class="empty">No cues yet — add some in Sound &amp; Light.</td></tr>'}</tbody>
+        <thead><tr><th>${T('Cue')}</th><th>${T('Sc.')}</th><th>${T('Description')}</th><th>${T('Standby / trigger')}</th><th>${T('Length')}</th><th>#</th><th></th></tr></thead>
+        <tbody>${rows || `<tr><td colspan="7" class="empty">${T('No cues yet — add some in Sound & Light.')}</td></tr>`}</tbody>
       </table>
     </div>
   </div>`;
@@ -1217,19 +1540,19 @@ function fmtClock(ms){
 
 function viewRun(){
   const list = cueList();
-  if(!list.length) return '<div class="wrap"><div class="empty">No cues to call yet. Add cues in Sound &amp; Light first.</div></div>';
+  if(!list.length) return `<div class="wrap"><div class="empty">${T('No cues to call yet. Add cues in Sound & Light first.')}</div></div>`;
   const idx = UI.runIdx || 0;
   if(!UI.started){ UI.started = Date.now(); saveUI(); }
 
   if(idx >= list.length){
     return `<div class="wrap" style="max-width:760px">
       <div class="gostage" style="text-align:center;padding:60px 30px">
-        <div class="now">CURTAIN DOWN</div>
-        <div class="cuebig" style="font-size:44px;color:var(--green)">END OF SHOW</div>
-        <div class="cuedesc" style="margin:0 auto">All ${list.length} cues called in <span class="mono">${fmtClock(Date.now()-UI.started)}</span>.</div>
+        <div class="now">${T('CURTAIN DOWN')}</div>
+        <div class="cuebig" style="font-size:44px;color:var(--green)">${T('END OF SHOW')}</div>
+        <div class="cuedesc" style="margin:0 auto">${T('All {n} cues called in {time}.', {n:list.length, time:'<span class="mono">'+fmtClock(Date.now()-UI.started)+'</span>'})}</div>
         <div style="display:flex;gap:10px;justify-content:center;margin-top:26px">
-          <button class="btn primary" data-act="startrun">Run it again</button>
-          <button class="btn ghost" data-view="cuebook">Back to cue sheet</button>
+          <button class="btn primary" data-act="startrun">${T('Run it again')}</button>
+          <button class="btn ghost" data-view="cuebook">${T('Back to cue sheet')}</button>
         </div>
       </div>
     </div>`;
@@ -1245,48 +1568,69 @@ function viewRun(){
   return `<div class="wrap" style="max-width:1080px">
     <div class="runwrap">
       <div class="gostage">
-        <div class="now">SCENE ${sceneTag(cue.scene)} · ${esc(sc.title).toUpperCase()} · ${esc(sc.duration||'')}</div>
+        <div class="now">${T('SCENE {tag} · {title} · {dur}', {tag:sceneTag(cue.scene), title:esc(sc.title).toUpperCase(), dur:esc(sc.duration||'')})}</div>
         <div class="cuebig">${cueLabel(cue)}</div>
         <div style="display:flex;gap:10px;align-items:center;margin-bottom:14px">
-          <span class="badge ${TYPES[cue.type].cls}">${TYPES[cue.type].label}</span>
-          <span class="dim2" style="font-size:11px">cue ${String(idx+1).padStart(2,'0')} of ${list.length}</span>
+          <span class="badge ${TYPES[cue.type].cls}">${T(TYPES[cue.type].label)}</span>
+          <span class="dim2" style="font-size:11px">${T('cue {i} of {n}', {i:String(idx+1).padStart(2,'0'), n:list.length})}</span>
         </div>
         <div class="cuedesc">${esc(cue.desc)}</div>
         ${cue.note?`<div class="dim" style="font-size:12px;margin-top:10px;line-height:1.5">${esc(cue.note)}</div>`:''}
         <div class="timer">
-          <div><div class="k">Trigger</div><div class="v" style="font-size:14px">${esc(cue.trig)}</div></div>
-          <div><div class="k">Length</div><div class="v">${esc(cue.dur||'—')}</div></div>
-          <div><div class="k">Elapsed</div><div class="v" id="run-elapsed">${fmtClock(Date.now()-UI.started)}</div></div>
+          <div><div class="k">${T('Trigger')}</div><div class="v" style="font-size:14px">${T(cue.trig)}</div></div>
+          <div><div class="k">${T('Length')}</div><div class="v">${esc(cue.dur||'—')}</div></div>
+          <div><div class="k">${T('Elapsed')}</div><div class="v" id="run-elapsed">${fmtClock(Date.now()-UI.started)}</div></div>
         </div>
         <div class="prog"><i style="width:${pct}%"></i></div>
-        <button class="gobtn" data-act="go">GO${next?' <span style="font-size:11px;font-weight:500;letter-spacing:.04em;opacity:.7">→ next '+cueLabel(next)+'</span>':''}</button>
+        <button class="gobtn" data-act="go">GO${next?' <span style="font-size:11px;font-weight:500;letter-spacing:.04em;opacity:.7">'+T('→ next {label}', {label:cueLabel(next)})+'</span>':''}</button>
         <div style="display:flex;gap:10px;margin-top:10px">
-          <button class="gobtn next" style="flex:1" data-act="back">↩ Back one cue</button>
-          <button class="gobtn next" style="flex:1" data-view="cuebook">Leave the run</button>
+          <button class="gobtn next" style="flex:1" data-act="back">↩ ${T('Back one cue')}</button>
+          <button class="gobtn next" style="flex:1" data-view="cuebook">${T('Leave the run')}</button>
         </div>
-        <div class="dim2" style="text-align:center;font-size:10.5px;margin-top:12px;letter-spacing:.08em">SPACE = GO · ESC = LEAVE THE RUN</div>
+        <div class="dim2" style="text-align:center;font-size:10.5px;margin-top:12px;letter-spacing:.08em">${T('SPACE = GO · ESC = LEAVE THE RUN')}</div>
       </div>
 
       <div class="runside">
         <div class="card">
-          <div class="sec">Standing by</div>
-          ${next?`<div class="upnext"><div class="k">${cueLabel(next)} · ${TYPES[next.type].label.toUpperCase()}</div><div class="d">${esc(next.desc)}</div>
-            <div class="dim2" style="font-size:10.5px;margin-top:4px">${esc(next.trig)} · scene ${sceneTag(next.scene)}</div></div>
-          <div class="dim2" style="font-size:11px;margin-top:8px">${list.length-idx-1} cue${list.length-idx-1===1?'':'s'} to go</div>`
-          :'<div class="dim" style="font-size:12.5px">This is the last cue of the show.</div>'}
+          <div class="sec">${T('Standing by')}</div>
+          ${next?`<div class="upnext"><div class="k">${cueLabel(next)} · ${T(TYPES[next.type].label).toUpperCase()}</div><div class="d">${esc(next.desc)}</div>
+            <div class="dim2" style="font-size:10.5px;margin-top:4px">${T(next.trig)} · ${T('scene {tag}', {tag:sceneTag(next.scene)})}</div></div>
+          <div class="dim2" style="font-size:11px;margin-top:8px">${T('{n} to go', {n:pl(list.length-idx-1,'cue')})}</div>`
+          :`<div class="dim" style="font-size:12.5px">${T('This is the last cue of the show.')}</div>`}
         </div>
         <div class="card">
-          <div class="sec">On stage · ${sceneTag(cue.scene)}</div>
-          <div class="pillrow">${castHere.map(p=>`<span class="chip"><i style="width:6px;height:6px;border-radius:2px;background:${p.cast.color}"></i>${esc(p.cast.role)}</span>`).join('') || '<span class="dim2" style="font-size:11px">nobody placed</span>'}</div>
+          <div class="sec">${T('On stage · {tag}', {tag:sceneTag(cue.scene)})}</div>
+          <div class="pillrow">${castHere.map(p=>`<span class="chip"><i style="width:6px;height:6px;border-radius:2px;background:${p.cast.color}"></i>${esc(p.cast.role)}</span>`).join('') || `<span class="dim2" style="font-size:11px">${T('nobody placed')}</span>`}</div>
         </div>
         <div class="card">
-          <div class="sec">Called · ${UI.executed.length}</div>
+          <div class="sec">${T('Called · {n}', {n:UI.executed.length})}</div>
           ${done.length?`<div class="done-list">${done.map(id=>{
             const c = S.cues.find(x=>x.id===id); if(!c) return '';
             return `<div class="done-item"><span class="no">${cueLabel(c)}</span><span style="flex:1">${esc(c.desc).slice(0,46)}</span></div>`;
-          }).join('')}</div>`:'<div class="dim2" style="font-size:11.5px">Nothing called yet.</div>'}
+          }).join('')}</div>`:`<div class="dim2" style="font-size:11.5px">${T('Nothing called yet.')}</div>`}
         </div>
       </div>
+    </div>
+  </div>`;
+}
+
+/* ==================================================================
+   10b. VIEW — SETTINGS
+   ================================================================== */
+function viewSettings(){
+  return `<div class="wrap" style="max-width:760px">
+    <div class="pagehead">
+      <div><div class="sec">${T('Settings')}</div><div class="h2">${T('Preferences')}</div>
+      <div class="desc">${T('Language and display options for this browser. Your show data is not changed.')}</div></div>
+    </div>
+    <div class="card">
+      <div class="sec">${T('Language')}</div>
+      <div class="desc" style="margin-top:6px">${T('Choose the language for buttons, labels and messages. English is the default.')}</div>
+      <div class="langopts">
+        <button class="langopt ${UI.lang==='en'?'on':''}" data-lang="en"><b>English</b><span>${UI.lang==='en'?T('Current'):T('Switch')}</span></button>
+        <button class="langopt ${UI.lang==='zh'?'on':''}" data-lang="zh"><b>简体中文</b><span>${UI.lang==='zh'?T('Current'):T('Switch')}</span></button>
+      </div>
+      <div class="stage-hint" style="margin-top:16px">${T('The demo show and any show you import keep their original text. Only the interface changes.')}</div>
     </div>
   </div>`;
 }
@@ -1311,7 +1655,7 @@ function placeActor(id){
   a.x = 26 + (n % 4) * 16;
   a.y = 46 + (Math.floor(n / 4) % 2) * 16;
   save(); render();
-  toast('Placed on stage — drag the circle where you want it.');
+  toast(T('Placed on stage — drag the circle where you want it.'));
 }
 
 function sendToWings(id){
@@ -1319,14 +1663,14 @@ function sendToWings(id){
   if(!a) return;
   a.on = false;
   save(); render();
-  toast('Moved to the wings.');
+  toast(T('Moved to the wings.'));
 }
 
 function autoArrange(){
   layoutScene(UI.scene);
   layoutProps(UI.scene);
   save(); render();
-  toast('Stage tidied — grab a circle to fine-tune it.');
+  toast(T('Stage tidied — grab a circle to fine-tune it.'));
 }
 
 function romanNum(n){
@@ -1339,25 +1683,25 @@ function romanNum(n){
 
 function addAct(){
   const no = romanNum(S.acts.length + 1);
-  const raw = prompt('Name this act', 'Act ' + no);
+  const raw = prompt(T('Name this act'), T('Act {no}', {no}));
   if(raw === null) return;
-  const name = String(raw).trim() || ('Act ' + no);
+  const name = String(raw).trim() || T('Act {no}', {no});
   const act = {id:uid('a'), no, name};
   S.acts.push(act);
   addScene(act.id);
-  toast('Act ' + no + ' added.');
+  toast(T('Act {no} added.', {no}));
 }
 
 function renameAct(id){
   const act = S.acts.find(a=>a.id===id);
   if(!act) return;
-  const raw = prompt('Rename act ' + act.no, act.name || ('Act ' + act.no));
+  const raw = prompt(T('Rename act {no}', {no:act.no}), act.name || T('Act {no}', {no:act.no}));
   if(raw === null) return;
   const name = String(raw).trim();
-  if(!name){ toast('Act name unchanged.'); return; }
+  if(!name){ toast(T('Act name unchanged.')); return; }
   act.name = name;
   save(); render();
-  toast('Act ' + act.no + ' renamed to “' + name + '”.');
+  toast(T('Act {no} renamed to “{name}”.', {no:act.no, name}));
 }
 
 function addScene(actId){
@@ -1368,7 +1712,7 @@ function addScene(actId){
   const sc = {id:uid('s'), act:actId, no:String(no), title:'Scene ' + no, duration:'', synopsis:''};
   S.scenes.push(sc); ensureApps(); save();
   UI.scene = sc.id; go('stage');
-  toast('Scene ' + no + ' added — rename it below the stage.');
+  toast(T('Scene {no} added — rename it below the stage.', {no}));
 }
 
 function resetShow(){
@@ -1378,7 +1722,7 @@ function resetShow(){
   UI.propQ = ''; UI.propStatus = 'all';
   UI.scene = S.scenes[0] ? S.scenes[0].id : null;
   saveUI(); render();
-  toast('Reset to the demo show.');
+  toast(T('Reset to the demo show.'));
 }
 
 function newShow(){
@@ -1388,14 +1732,14 @@ function newShow(){
   UI.propQ = ''; UI.propStatus = 'all';
   UI.scene = S.scenes[0] ? S.scenes[0].id : null;
   saveUI(); go('stage');
-  toast('Blank show — add your cast, props and cues.');
+  toast(T('Blank show — add your cast, props and cues.'));
 }
 
 function delScene(id){
   const sc = sceneOf(id);
   if(!sc) return;
-  if(!confirm('Delete scene ' + sceneTag(id) + (sc.title?' “‘'+sc.title+'”':'') + '? Its cues and placements go with it.')) return;
-  const before = JSON.stringify(S), label = 'scene ' + sceneTag(id);
+  if(!confirm(T('Delete scene {scene}? Its cues and placements go with it.', {scene:sceneTag(id) + (sc.title?' “'+sc.title+'”':'')}))) return;
+  const before = JSON.stringify(S), label = T('scene {tag}', {tag:sceneTag(id)});
   S.scenes = S.scenes.filter(s=>s.id!==id);
   S.apps = S.apps.filter(a=>a.scene!==id);
   S.props.forEach(p=>{ p.scenes = p.scenes.filter(x=>x!==id); });
@@ -1405,39 +1749,39 @@ function delScene(id){
   sceneList().filter(s=>s.act===sc.act).forEach((s,i)=>{ s.no = String(i+1); });
   UI.scene = sceneList()[0] ? sceneList()[0].id : null;
   rememberDelete(label, before, id); persist();
-  render(); toast('Scene deleted — ⌘/Ctrl Z to undo.');
+  render(); toast(T('Scene deleted — ⌘/Ctrl Z to undo.'));
 }
 
 function addCast(){
   const role = document.getElementById('nc-role').value.trim();
   const name = document.getElementById('nc-name').value.trim();
-  if(!role || !name){ toast('Character and actor are both needed.'); return; }
+  if(!role || !name){ toast(T('Character and actor are both needed.')); return; }
   const palette = ['#f2b45c','#63b2ff','#f78fa7','#6fe0a8','#b58bff','#ffc94d','#ff8f6b','#7fd8c0','#9aa7ff','#d9a3ff'];
   S.cast.push({id:uid('c'), name, role, color:palette[S.cast.length % palette.length],
                notes:document.getElementById('nc-notes').value.trim()});
-  ensureApps(); save(); render(); toast(role + ' added to the company.');
+  ensureApps(); save(); render(); toast(T('{role} added to the company.', {role}));
 }
 
 function addProp(){
   const name = document.getElementById('np-name').value.trim();
-  if(!name){ toast('Give the prop a name.'); return; }
+  if(!name){ toast(T('Give the prop a name.')); return; }
   S.props.push({id:uid('p'), name,
     cat:document.getElementById('np-cat').value,
     qty:Number(document.getElementById('np-qty').value)||1,
     status:document.getElementById('np-status').value,
     loc:document.getElementById('np-loc').value.trim(),
     scenes:[], notes:''});
-  save(); render(); toast('Prop added to the inventory.');
+  save(); render(); toast(T('Prop added to the inventory.'));
 }
 
 function addCue(){
   const desc = document.getElementById('ncq-desc').value.trim();
-  if(!desc){ toast('Describe what happens on the cue.'); return; }
+  if(!desc){ toast(T('Describe what happens on the cue.')); return; }
   S.cues.push({id:uid('q'), type:document.getElementById('ncq-type').value,
     scene:document.getElementById('ncq-scene').value, desc,
     trig:document.getElementById('ncq-trig').value,
     dur:document.getElementById('ncq-dur').value.trim(), note:''});
-  save(); render(); toast('Cue added.');
+  save(); render(); toast(T('Cue added.'));
 }
 
 function startRun(fromIdx){
@@ -1472,7 +1816,7 @@ function exportJSON(){
   a.download = (S.show.title || 'production').replace(/[^\w\-]+/g,'-').toLowerCase() + '-stage-management.json';
   a.click();
   setTimeout(()=>URL.revokeObjectURL(a.href), 1500);
-  toast('Backup downloaded.');
+  toast(T('Backup downloaded.'));
 }
 
 function filterPropRows(){
@@ -1486,9 +1830,10 @@ function filterPropRows(){
    12. EVENT WIRING
    ================================================================== */
 document.addEventListener('click', e=>{
-  const el = e.target.closest('[data-view],[data-act],[data-addact],[data-addscene],[data-delscene],[data-renameact],[data-place],[data-send],[data-delcast],[data-delprop],[data-delcue],[data-rmprop],[data-rmpropscene],[data-jump]');
+  const el = e.target.closest('[data-view],[data-act],[data-lang],[data-addact],[data-addscene],[data-delscene],[data-renameact],[data-place],[data-send],[data-delcast],[data-delprop],[data-delcue],[data-rmprop],[data-rmpropscene],[data-jump]');
   if(!el) return;
 
+  if(el.dataset.lang){ setLanguage(el.dataset.lang); return; }
   if(el.dataset.view){ go(el.dataset.view, el.dataset.scene); return; }
 
   if(el.dataset.act){
@@ -1496,11 +1841,11 @@ document.addEventListener('click', e=>{
     if(act==='export') exportJSON();
     else if(act==='import') document.getElementById('file').click();
     else if(act==='reset'){
-      if(confirm('Reset everything to the demo production? Your current changes will be lost.')) resetShow();
+      if(confirm(T('Reset everything to the demo production? Your current changes will be lost.'))) resetShow();
     }
     else if(act==='print'){ go('cuebook'); setTimeout(()=>window.print(), 60); }
     else if(act==='newshow'){
-      if(confirm('Start a blank production? The current show stays saved until you change it here, and Export makes a backup.')) newShow();
+      if(confirm(T('Start a blank production? The current show stays saved until you change it here, and Export makes a backup.'))) newShow();
     }
     else if(act==='addcast') addCast();
     else if(act==='addprop') addProp();
@@ -1526,11 +1871,11 @@ document.addEventListener('click', e=>{
 
   if(el.dataset.delcast){
     const c = S.cast.find(x=>x.id===el.dataset.delcast);
-    if(c && confirm('Remove ' + c.role + ' (' + c.name + ') from the company?')){
+    if(c && confirm(T('Remove {role} ({name}) from the company?', {role:c.role, name:c.name}))){
       const before = JSON.stringify(S);
       S.cast = S.cast.filter(x=>x.id!==c.id); S.apps = S.apps.filter(a=>a.cast!==c.id);
-      rememberDelete('cast member ' + c.role, before, null); persist();
-      render(); toast(c.role + ' removed — ⌘/Ctrl Z to undo.');
+      rememberDelete(T('cast member {role}', {role:c.role}), before, null); persist();
+      render(); toast(T('{role} removed — ⌘/Ctrl Z to undo.', {role:c.role}));
     }
     return;
   }
@@ -1541,22 +1886,22 @@ document.addEventListener('click', e=>{
 
   if(el.dataset.delprop){
     const p = propOf(el.dataset.delprop);
-    if(p && confirm('Delete prop “' + p.name + '”?')){
+    if(p && confirm(T('Delete prop “{name}”?', {name:p.name}))){
       const before = JSON.stringify(S);
       S.props = S.props.filter(x=>x.id!==p.id);
       ensurePmarks();
-      rememberDelete('prop “' + p.name + '”', before, null); persist();
-      render(); toast('Prop deleted — ⌘/Ctrl Z to undo.');
+      rememberDelete(T('prop “{name}”', {name:p.name}), before, null); persist();
+      render(); toast(T('Prop deleted — ⌘/Ctrl Z to undo.'));
     }
     return;
   }
   if(el.dataset.delcue){
     const c = S.cues.find(x=>x.id===el.dataset.delcue);
-    if(c && confirm('Delete cue ' + cueLabel(c) + '?')){
-      const before = JSON.stringify(S), label = 'cue ' + cueLabel(c);
+    if(c && confirm(T('Delete cue {label}?', {label:cueLabel(c)}))){
+      const before = JSON.stringify(S), label = T('cue {label}', {label:cueLabel(c)});
       S.cues = S.cues.filter(x=>x.id!==c.id);
       rememberDelete(label, before, null); persist();
-      render(); toast('Cue deleted — ⌘/Ctrl Z to undo.');
+      render(); toast(T('Cue deleted — ⌘/Ctrl Z to undo.'));
     }
     return;
   }
@@ -1588,7 +1933,7 @@ document.addEventListener('input', e=>{
   if(!o) return;
   o[f] = el.type==='number' ? Number(el.value) : el.value;
   if(k==='show' && f==='title'){
-    document.getElementById('show-title').textContent = el.value || 'Untitled production';
+    document.getElementById('show-title').textContent = el.value || T('Untitled production');
   }
   if(k==='scene' && f==='title'){
     document.querySelectorAll('[data-view="stage"][data-scene]').forEach(b=>{
@@ -1609,7 +1954,7 @@ document.addEventListener('change', e=>{
       try{
         const clean = normaliseShow(JSON.parse(reader.result));
         if(!clean) throw new Error('shape');
-        if(!confirm('Replace “' + S.show.title + '” with “' + (clean.show.title || 'Untitled production') + '”? The current show will be overwritten.')) return;
+        if(!confirm(T('Replace “{old}” with “{new}”? The current show will be overwritten.', {old:S.show.title, new:clean.show.title || T('Untitled production')}))) return;
         const prev = S, prevUI = JSON.stringify(UI);
         try{
           S = clean;
@@ -1622,14 +1967,14 @@ document.addEventListener('change', e=>{
           render();
           save();
           saveUI();
-          toast('Production imported.');
+          toast(T('Production imported.'));
         }catch(err){
           S = prev;
           try{ UI = Object.assign(UI, JSON.parse(prevUI)); }catch(e){}
           try{ render(); }catch(e){}
-          toast('That file is not a stage management backup.');
+          toast(T('That file is not a stage management backup.'));
         }
-      }catch(err){ toast('That file is not a stage management backup.'); }
+      }catch(err){ toast(T('That file is not a stage management backup.')); }
     };
     reader.readAsText(file);
     el.value = '';
@@ -1652,7 +1997,7 @@ document.addEventListener('change', e=>{
       });
     }
     save(); render();
-    toast(src === '__clear' ? 'Stage cleared.' : 'Blocking copied — adjust from here.');
+    toast(T(src === '__clear' ? 'Stage cleared.' : 'Blocking copied — adjust from here.'));
     return;
   }
 
@@ -1699,7 +2044,7 @@ function rememberDelete(label, before, scene){
 }
 
 function undoDelete(){
-  if(!deleteStack.length){ toast('Nothing to restore.'); return; }
+  if(!deleteStack.length){ toast(T('Nothing to restore.')); return; }
   const d = deleteStack.pop();
   try{
     S = JSON.parse(d.before);
@@ -1708,8 +2053,8 @@ function undoDelete(){
     if(d.scene && sceneOf(d.scene)) UI.scene = d.scene;
     persist(); render();
     const left = deleteStack.length;
-    toast('Restored ' + d.label + (left ? ' — ' + left + ' more delete' + (left === 1 ? '' : 's') + ' to undo.' : '.'));
-  }catch(e){ toast('Could not restore that delete.'); }
+    toast(left ? T('Restored {label} — {n} more deletes to undo.', {label:d.label, n:left}) : T('Restored {label}.', {label:d.label}));
+  }catch(e){ toast(T('Could not restore that delete.')); }
 }
 
 function zoneLabel(x, y){
@@ -1721,7 +2066,7 @@ function zoneLabel(x, y){
 function updateReadout(x, y){
   const el = document.getElementById('stage-readout');
   if(!el) return;
-  if(x == null){ el.textContent = 'free floor'; el.style.opacity = '.6'; return; }
+  if(x == null){ el.textContent = T('free floor'); el.style.opacity = '.6'; return; }
   el.textContent = zoneLabel(x, y) + ' · ' + Math.round(x) + ' / ' + Math.round(y);
   el.style.opacity = '1';
 }
@@ -1750,7 +2095,7 @@ function pushMove(kind, id, prev, batch){
 }
 
 function undoMove(){
-  if(!moveStack.length){ toast('Nothing to undo.'); return; }
+  if(!moveStack.length){ toast(T('Nothing to undo.')); return; }
   const m = moveStack.pop();
   if(m.kind === 'cast'){
     const a = appOf(m.scene, m.id);
@@ -1761,7 +2106,7 @@ function undoMove(){
   }
   save();
   if(UI.view === 'stage') render();
-  toast('Move undone.');
+  toast(T('Move undone.'));
 }
 
 function nudge(dx, dy){
@@ -1869,7 +2214,7 @@ function dirCastIndex(){
   const idx = [];
   S.cast.forEach(c=>{
     idx.push([c.name.toLowerCase(), c]);
-    c.role.toLowerCase().split(/[\/,&]+|\band\b/).forEach(pt=>{
+    c.role.toLowerCase().split(/[\/,&／，]+|\band\b|和|、|及|与/).forEach(pt=>{
       let t = pt.trim();
       if(t.length > 1){
         idx.push([t, c]);
@@ -1894,18 +2239,26 @@ function dirMatch(text){
 
 function dirIntent(text){
   const t = ' ' + text.toLowerCase() + ' ';
-  const exit  = /\b(exit|exits|exiting|leave|leaves|clears?|clear the|out)\b/.test(t);
-  const enter = /\b(enter|enters|entrance|come on|comes on|come in|comes in)\b/.test(t);
+  const exit  = /\b(exit|exits|exiting|leave|leaves|clears?|clear the|out)\b/.test(t)
+             || /(退场|下场|离场|退出|下台|离开|出去)/.test(t);
+  const enter = /\b(enter|enters|entrance|come on|comes on|come in|comes in)\b/.test(t)
+             || /(上场|入场|登台|上台|进场|登场|出来)/.test(t);
   let row = null;
   ROW_WORDS.forEach(([w,y])=>{ if(row == null && new RegExp('\\b' + w + '\\b').test(t)) row = y; });
+  if(row == null){
+    const cnRows = [['后区',26],['后场',26],['后方',26],['舞台后',26],['后',26],
+                    ['前区',63],['前场',63],['前方',63],['舞台前',63],['前',63],
+                    ['中间',50],['中央',50],['中区',50],['中',50]];
+    for(const [w,y] of cnRows){ if(t.indexOf(w) >= 0){ row = y; break; } }
+  }
   let col = 0;
   /* ground plan: back wall at the top, audience at the bottom. Stage left is
      therefore the right side of the page; house left is the audience's side. */
-  if(/\bstage left\b/.test(t)) col = 1;
-  else if(/\bhouse left\b/.test(t)) col = -1;
+  if(/\bhouse left\b/.test(t) || /(观众左|观众席左)/.test(t)) col = -1;
+  else if(/\bstage left\b/.test(t) || /(舞台左|台左|左)/.test(t)) col = 1;
   else if(/\bleft\b/.test(t)) col = 1;
-  else if(/\bstage right\b/.test(t)) col = -1;
-  else if(/\bhouse right\b/.test(t)) col = 1;
+  else if(/\bhouse right\b/.test(t) || /(观众右|观众席右)/.test(t)) col = 1;
+  else if(/\bstage right\b/.test(t) || /(舞台右|台右|右)/.test(t)) col = -1;
   else if(/\bright\b/.test(t)) col = -1;
   return {exit, enter, row, col, any: row != null || col !== 0};
 }
@@ -1914,19 +2267,20 @@ function compileDirections(raw){
   const lines = raw.split(/[\n\r;]+/).map(x=>x.trim().replace(/^[-•*\u2022]\s*/,'').replace(/^\d+[\.\)]\s*/,'')).filter(Boolean);
   return lines.map(line=>{
     const lower = line.toLowerCase();
-    const whole = /\b(everyone|everybody|all|company|whole cast|the cast)\b/.test(lower);
+    const whole = /\b(everyone|everybody|all|company|whole cast|the cast)\b/.test(lower)
+                || /(所有人|全体|大家|全部|全员|剧组)/.test(lower);
     if(whole){
       const it = dirIntent(line);
       const ids = onStage(UI.scene).map(p=>p.cast.id);
       if(it.exit) return {line, ids, mode:'exit', ok:true};
-      if(/\b(marks|mark|places|reset|arrange|tidy|line up)\b/.test(lower)) return {line, ids, mode:'layout', ok:true};
+      if(/\b(marks|mark|places|reset|arrange|tidy|line up)\b/.test(lower) || /(回位|归位|就位|标记点|集合|排位|整理)/.test(lower)) return {line, ids, mode:'layout', ok:true};
       return {line, ids, mode:'move', row: it.row != null ? it.row : 46, col: it.col, ok:true};
     }
     const ids = dirMatch(line);
-    if(!ids.length) return {line, ids:[], mode:'—', ok:false, note:'no character I recognise'};
+    if(!ids.length) return {line, ids:[], mode:'—', ok:false, note:T('no character I recognise')};
     const it = dirIntent(line);
     if(it.exit)  return {line, ids, mode:'exit', ok:true};
-    if(!it.any && !it.enter) return {line, ids, mode:'—', ok:false, note:'name a place — “to downstage left”'};
+    if(!it.any && !it.enter) return {line, ids, mode:'—', ok:false, note:T('name a place — “to downstage left”')};
     return {line, ids, mode: it.enter ? 'enter' : 'move', row:it.row, col:it.col, ok:true};
   });
 }
@@ -2007,10 +2361,10 @@ function dirLine(st){
 }
 
 function runDirections(){
-  if(dirRunning){ toast('Still moving — give it a second.'); return; }
+  if(dirRunning){ toast(T('Still moving — give it a second.')); return; }
   const box = document.getElementById('dir-input');
   if(!box || !box.value.trim()){
-    toast('Write a direction first, e.g. “Puck crosses to downstage left”.');
+    toast(T('Write a direction first, e.g. “Puck crosses to downstage left”.'));
     if(box) box.focus();
     return;
   }
@@ -2025,17 +2379,17 @@ function runDirections(){
   dirRunning = true;
   dirBatch += 1;
   const btn = document.querySelector('[data-act="runmove"]');
-  if(btn){ btn.disabled = true; btn.textContent = 'Moving…'; }
+  if(btn){ btn.disabled = true; btn.textContent = T('Moving…'); }
   if(out) out.innerHTML = '';
   let i = 0, moved = 0;
   const tick = ()=>{
     if(i >= steps.length){
       dirRunning = false;
-      if(btn){ btn.disabled = false; btn.textContent = 'Run moves'; }
+      if(btn){ btn.disabled = false; btn.textContent = T('Run moves'); }
       save(); render();
       const o = document.getElementById('dir-out');
       if(o) o.innerHTML = steps.map(dirLine).join('');
-      toast(moved ? 'Blocking updated — ' + moved + ' move' + (moved === 1 ? '' : 's') + '.' : 'Nothing to move.');
+      toast(moved ? T('Blocking updated — {n}.', {n:pl(moved,'move')}) : T('Nothing to move.'));
       return;
     }
     const st = steps[i++];
@@ -2047,9 +2401,9 @@ function runDirections(){
 }
 
 function undoRun(){
-  if(!moveStack.length){ toast('Nothing to undo.'); return; }
+  if(!moveStack.length){ toast(T('Nothing to undo.')); return; }
   const b = moveStack[moveStack.length-1].batch;
-  if(!b){ toast('No moves from Run to undo.'); return; }
+  if(!b){ toast(T('No moves from Run to undo.')); return; }
   let n = 0;
   while(moveStack.length && moveStack[moveStack.length-1].batch === b){
     const m = moveStack.pop(); n++;
@@ -2062,7 +2416,7 @@ function undoRun(){
     }
   }
   save(); render();
-  toast(n + ' move' + (n === 1 ? '' : 's') + ' undone.');
+  toast(T('{n} undone.', {n:pl(n,'move')}));
 }
 
 /* keyboard: nudge, undo, deselect */
@@ -2105,7 +2459,7 @@ setInterval(()=>{
 }, 1000);
 
 render();
-if(loadNotice) toast('Saved data was unreadable — started from the demo. A copy is kept in this browser.');
+if(loadNotice) toast(T('Saved data was unreadable — started from the demo. A copy is kept in this browser.'));
 </script>
 </body>
 </html>

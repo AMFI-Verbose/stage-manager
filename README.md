@@ -28,6 +28,9 @@ scenes that call them.
 **Run show** — the big GO button, running clock, and the executed cue list. The cue position
 and called list survive a refresh.
 
+**Settings** — switch the interface between English (the default) and Simplified Chinese. The
+choice is saved in this browser; the show, the demo and imported files keep their original text.
+
 ## Moving people
 
 Drag a token, or click one and nudge it with the arrow keys (hold Shift for 5% steps).
@@ -50,6 +53,9 @@ Names resolve against roles and actors, doubling included — both `Flute` and `
 same track. Places are `upstage / centre / downstage` × `left / right`, plus `enter`, `exit` and
 `to marks`. Lines the app cannot read stay in the log with a hint instead of guessing.
 **Undo run** reverts the whole batch at once.
+
+Chinese directions use the same parser: `Gerda 走到左前`, `Kay 退场`, `所有人回位`. Position
+words are `前 / 中 / 后` × `左 / 右`, plus `上场`, `退场` and `回位`.
 
 ## The demo show
 
