@@ -12,7 +12,7 @@ missing props or unassigned cues.
 
 **Scenes & stage** — a plan view of a half-round floor: flat back wall upstage, arc into the
 audience. Actors are coloured discs, props are tags preset along the back wall. Drag either
-one and the position saves to that scene.
+one and the position saves to that scene. **+ act** at the end of the scene tabs adds another act.
 
 **Cast & doubling** — enter/exit counts per character, doubling notes per track.
 
@@ -23,12 +23,13 @@ scenes that call them.
 
 **Cue sheet** — a printable running order; cue numbers are generated per type (SQ / LX / PQ).
 
-**Run show** — the big GO button, running clock, and the executed cue list.
+**Run show** — the big GO button, running clock, and the executed cue list. The cue position
+and called list survive a refresh.
 
 ## Moving people
 
 Drag a token, or click one and nudge it with the arrow keys (hold Shift for 5% steps).
-⌘/Ctrl Z undoes the last move, Delete sends the selected actor to the wings.
+⌘/Ctrl Z undoes the last move or the last delete, Delete sends the selected actor to the wings.
 
 Better still, type the blocking into **Movement directions** and press **Run moves**
 (⌘/Ctrl ↵ also works):
@@ -51,7 +52,7 @@ same track. Places are `upstage / centre / downstage` × `left / right`, plus `e
 
 The Snow Queen — 5 acts, 11 scenes, 14 tracks (3 doubling roles), 13 props, 28 cues.
 Snow Queen and Midsummer Night's Dream versions both store separately; **Reset** rebuilds the
-demo, **Export / Import** move a production as JSON.
+demo, **Export / Import** move a production as JSON. Import asks before replacing the current show.
 
 ## Data
 

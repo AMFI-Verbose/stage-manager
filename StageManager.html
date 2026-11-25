@@ -246,12 +246,26 @@ input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-
 @media (max-width:1040px){.cols,.runwrap{grid-template-columns:minmax(0,1fr)}.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media (max-width:860px){.rail{width:68px;flex:0 0 68px;padding:16px 8px}.brand h1,.brand p,.navbtn .lab,.rail-foot{display:none}.navbtn{justify-content:center}.tb-title{max-width:40vw}.view{padding:24px 20px 60px}}
 @media print{
-  body{background:#fff;color:#111;overflow:visible}
+  html,body{height:auto;background:#fff;color:#111;overflow:visible}
   body::before,.rail,.topbar,.toast{display:none!important}
-  .view{overflow:visible;padding:0}
+  .app{display:block;height:auto}
+  .main{display:block}
+  .view{display:block;overflow:visible;padding:0}
+  .pagehead .btn{display:none!important}
   .tbl td,.tbl th{border-color:#ccc;color:#111}
   .card{box-shadow:none;border-color:#ccc}
   .badge{border-color:#999;color:#333}
+  .cuebook-tbl{table-layout:fixed}
+  .cuebook-tbl th:last-child,.cuebook-tbl td:last-child{display:none}
+  .cuebook-tbl th:nth-child(1){width:56px}
+  .cuebook-tbl th:nth-child(2){width:34px}
+  .cuebook-tbl th:nth-child(4){width:104px}
+  .cuebook-tbl th:nth-child(5){width:42px}
+  .cuebook-tbl th:nth-child(6){width:38px}
+  .cuebook-tbl td{padding:6px 7px;font-size:11px}
+  .cuebook-tbl td:nth-child(3){min-width:0!important}
+  .cuebook-tbl tr{break-inside:avoid;page-break-inside:avoid}
+  .cuebook-tbl thead{display:table-header-group}
 }
 
 </style>
@@ -470,6 +484,10 @@ function ensureApps(){
 /* free positions: 0–100 of the stage canvas */
 function normalise(){
   if(!Array.isArray(S.pmarks)) S.pmarks = [];
+  if(!Array.isArray(S.apps)) S.apps = [];
+  /* remember which scenes already had blocking before filling missing coords */
+  const hadPos = {};
+  S.apps.forEach(a=>{ if(a.x!=null && a.y!=null) hadPos[a.scene] = true; });
   const dup = {};
   const fresh = {};
   S.apps.forEach(a=>{
@@ -483,7 +501,8 @@ function normalise(){
     }
   });
   ensurePmarks();
-  Object.keys(fresh).forEach(sc=>{ if(onStage(sc).length) layoutScene(sc); });
+  /* only lay out a scene that had no positions at all; never disturb saved blocking */
+  Object.keys(fresh).forEach(sc=>{ if(!hadPos[sc] && onStage(sc).length) layoutScene(sc); });
   /* older saves may sit outside the half-round floor — pull them back inside */
   S.apps.forEach(a=>{ if(a.x != null && a.y != null){ const p = clampDisc(a.x, a.y); a.x = p.x; a.y = p.y; } });
   S.pmarks.forEach(m=>{ const p = clampDisc(m.x, m.y); m.x = p.x; m.y = p.y; });
@@ -536,39 +555,79 @@ function pmarksIn(scene){
 
 function ensurePmarks(){
   if(!Array.isArray(S.pmarks)) S.pmarks = [];
-  let freshProps = false;
-  sceneList().forEach(sc=>{
-    propsIn(sc.id).forEach(prop=>{
-      if(!S.pmarks.some(m=>m.scene===sc.id && m.prop===prop.id)){
-        S.pmarks.push({scene:sc.id, prop:prop.id, x:50, y:8});
-        freshProps = true;
-      }
-    });
-  });
   S.pmarks = S.pmarks.filter(m=>{
     const prop = propOf(m.prop);
     return prop && prop.scenes.includes(m.scene);
   });
-  if(freshProps){
-    const touched = new Set(S.pmarks.filter(m=>!m.__spread).map(m=>m.scene));
-    touched.forEach(sc=>layoutProps(sc));
-    S.pmarks.forEach(m=>{ delete m.__spread; });
-  }
+  const added = S.pmarks.filter(m=>m.x==null || m.y==null);
+  sceneList().forEach(sc=>{
+    propsIn(sc.id).forEach(prop=>{
+      if(!S.pmarks.some(m=>m.scene===sc.id && m.prop===prop.id)){
+        const m = {scene:sc.id, prop:prop.id, x:null, y:null};
+        S.pmarks.push(m);
+        added.push(m);
+      }
+    });
+  });
+  /* place only the new marks, in the same back-wall rows layoutProps uses */
+  added.forEach(m=>{
+    const marks = S.pmarks.filter(x=>x.scene===m.scene);
+    const i = marks.indexOf(m);
+    const per = 4;
+    const y = 7.4 + Math.floor(i/per) * 8;
+    const sp = Math.max(4, discHalf(y) - 12);
+    const cnt = Math.min(per, marks.length - Math.floor(i/per)*per);
+    const x = cnt === 1 ? 50 : 50 - sp + (2*sp) * (i % per) / (cnt - 1);
+    m.x = Math.max(50 - sp, Math.min(50 + sp, x));
+    m.y = y;
+  });
 }
 
 /* ==================================================================
    2. STATE + SMALL HELPERS
    ================================================================== */
+/* A backup is only useful if its shape can actually be rendered. Keep the
+   checks here so a stale or hand-edited file cannot replace a working show. */
+function normaliseShow(s){
+  if(!s || typeof s !== 'object' || !s.show || typeof s.show !== 'object') return null;
+  if(!['acts','scenes','cast','props','cues'].every(k=>Array.isArray(s[k]))) return null;
+  if(!Array.isArray(s.apps)) s.apps = [];
+  if(!Array.isArray(s.pmarks)) s.pmarks = [];
+  if(s.acts.some(a=>!a || typeof a.id !== 'string')) return null;
+  if(s.scenes.some(sc=>!sc || typeof sc.id !== 'string' || typeof sc.title !== 'string' || !s.acts.some(a=>a.id===sc.act))) return null;
+  if(s.cast.some(c=>!c || typeof c.id !== 'string' || typeof c.role !== 'string' || typeof c.name !== 'string')) return null;
+  if(s.props.some(p=>!p || typeof p.id !== 'string' || typeof p.name !== 'string')) return null;
+  s.props.forEach(p=>{ if(!Array.isArray(p.scenes)) p.scenes = []; });
+  if(s.cues.some(c=>!c || typeof c.id !== 'string' || typeof c.desc !== 'string' || !TYPES[c.type] || !s.scenes.some(sc=>sc.id===c.scene))) return null;
+  s.apps = s.apps.filter(a=>a && typeof a === 'object');
+  s.pmarks = s.pmarks.filter(m=>m && typeof m === 'object');
+  return s;
+}
+
+let loadNotice = false;
 function loadState(){
+  let raw = null;
   try{
-    const raw = localStorage.getItem(LS_KEY);
-    if(raw){ const s = JSON.parse(raw); if(s && s.scenes && s.cast) return s; }
-  }catch(e){}
+    raw = localStorage.getItem(LS_KEY);
+    if(raw){
+      const s = JSON.parse(raw);
+      const ok = normaliseShow(s);
+      if(ok) return ok;
+      /* keep the unreadable copy for manual recovery, then start from the demo */
+      try{ localStorage.setItem(LS_KEY + '.bad', raw); }catch(e){}
+      loadNotice = true;
+    }
+  }catch(e){
+    if(raw){ try{ localStorage.setItem(LS_KEY + '.bad', raw); }catch(_e){} }
+    loadNotice = true;
+  }
   return null;
 }
 let S = loadState() || seed();
 
 function save(){
+  /* any later edit makes a one-level delete undo unsafe */
+  lastDelete = null; lastDeleteAt = 0;
   try{ localStorage.setItem(LS_KEY, JSON.stringify(S)); }catch(e){}
   const el = document.getElementById('save-state');
   if(el){
@@ -607,7 +666,7 @@ const castOf  = id => S.cast.find(c=>c.id===id);
 const propOf  = id => S.props.find(p=>p.id===id);
 const appOf   = (scene, cast) => S.apps.find(a=>a.scene===scene && a.cast===cast);
 const onStage = sid => S.apps.filter(a=>a.scene===sid && a.on && a.x!=null).map(a=>({cast:castOf(a.cast), x:a.x, y:a.y})).filter(x=>x.cast);
-const offStage = sid => S.apps.filter(a=>a.scene===sid && !(a.on && a.zone)).map(a=>castOf(a.cast)).filter(Boolean);
+const offStage = sid => S.apps.filter(a=>a.scene===sid && !a.on).map(a=>castOf(a.cast)).filter(Boolean);
 const propsIn = sid => S.props.filter(p=>p.scenes.includes(sid));
 const cuesIn  = sid => cueList().filter(c=>c.scene===sid);
 const sceneTitle = sid => { const s = sceneOf(sid); return s ? (s.title||'Untitled scene') : '—'; };
@@ -617,7 +676,7 @@ const sceneTag = sid => {
   return (a?a.no:'?') + '.' + s.no;
 };
 function castScenes(castId){
-  return sceneList().filter(s=> S.apps.some(a=>a.scene===s.id && a.cast===castId && a.on && a.zone));
+  return sceneList().filter(s=> S.apps.some(a=>a.scene===s.id && a.cast===castId && a.on));
 }
 function initials(name){
   return String(name||'?').split(/\s+/).map(w=>w[0]).slice(0,2).join('').toUpperCase();
@@ -640,13 +699,27 @@ const NAV = [
   ['run','Run Show']
 ];
 let UI = {view:'overview', scene:'s1', propQ:'', propStatus:'all', cueType:'all', runIdx:0, started:null, executed:[]};
-try{ const u = JSON.parse(localStorage.getItem(LS_UI)||'null'); if(u && u.view) UI = Object.assign(UI, u, {started:null}); }catch(e){}
+try{
+  const u = JSON.parse(localStorage.getItem(LS_UI)||'null');
+  if(u && u.view){
+    UI = Object.assign(UI, u);
+    UI.started = typeof u.started === 'number' ? u.started : null;
+    UI.runIdx = Number.isInteger(u.runIdx) ? u.runIdx : 0;
+    UI.executed = Array.isArray(u.executed) ? u.executed : [];
+  }
+}catch(e){}
+function saveUI(){
+  try{
+    localStorage.setItem(LS_UI, JSON.stringify({view:UI.view, scene:UI.scene, runIdx:UI.runIdx,
+                                                started:UI.started, executed:UI.executed}));
+  }catch(e){}
+}
 
 function go(view, scene){
   UI.view = view;
   try{ selected = (view === 'stage' && !scene) ? selected : null; }catch(err){}
   if(scene) UI.scene = scene;
-  try{ localStorage.setItem(LS_UI, JSON.stringify({view:UI.view, scene:UI.scene})); }catch(e){}
+  saveUI();
   render();
   document.getElementById('view').scrollTop = 0;
 }
@@ -812,7 +885,7 @@ function viewStage(){
     return `<div class="actcol"><span class="actlab">ACT ${esc(a.no)}</span>${inAct.map(x=>
       `<button class="stab ${x.id===UI.scene?'on':''}" data-view="stage" data-scene="${x.id}">${x.no}. ${esc(x.title)}</button>`).join('')}
       <button class="stab plus" data-addscene="${a.id}">+ scene</button></div>`;
-  }).join('');
+  }).join('') + `<div class="actcol"><button class="stab plus" data-addact="1">+ act</button></div>`;
 
   const panelPlaced = placed.slice().sort((a,b)=>a.cast.role.localeCompare(b.cast.role)).map(p=>`<div class="sp-row">
       <span class="sp-dot" style="--c:${p.cast.color}">${initials(p.cast.name)}</span>
@@ -1108,7 +1181,7 @@ function viewCueBook(){
       </div>
     </div>
     <div class="card flush">
-      <table class="tbl">
+      <table class="tbl cuebook-tbl">
         <thead><tr><th>Cue</th><th>Sc.</th><th>Description</th><th>Standby / trigger</th><th>Length</th><th>#</th><th></th></tr></thead>
         <tbody>${rows || '<tr><td colspan="7" class="empty">No cues yet — add some in Sound &amp; Light.</td></tr>'}</tbody>
       </table>
@@ -1127,7 +1200,7 @@ function viewRun(){
   const list = cueList();
   if(!list.length) return '<div class="wrap"><div class="empty">No cues to call yet. Add cues in Sound &amp; Light first.</div></div>';
   const idx = UI.runIdx || 0;
-  if(!UI.started) UI.started = Date.now();
+  if(!UI.started){ UI.started = Date.now(); saveUI(); }
 
   if(idx >= list.length){
     return `<div class="wrap" style="max-width:760px">
@@ -1237,6 +1310,25 @@ function autoArrange(){
   toast('Stage tidied — grab a circle to fine-tune it.');
 }
 
+function romanNum(n){
+  const map = [[1000,'M'],[900,'CM'],[500,'D'],[400,'CD'],[100,'C'],[90,'XC'],
+               [50,'L'],[40,'XL'],[10,'X'],[9,'IX'],[5,'V'],[4,'IV'],[1,'I']];
+  let out = '';
+  map.forEach(([v,s])=>{ while(n >= v){ out += s; n -= v; } });
+  return out;
+}
+
+function addAct(){
+  const no = romanNum(S.acts.length + 1);
+  const raw = prompt('Name this act', 'Act ' + no);
+  if(raw === null) return;
+  const name = String(raw).trim() || ('Act ' + no);
+  const act = {id:uid('a'), no, name};
+  S.acts.push(act);
+  addScene(act.id);
+  toast('Act ' + no + ' added.');
+}
+
 function addScene(actId){
   if(!S.acts.some(a=>a.id===actId)) actId = S.acts[0] ? S.acts[0].id : null;
   if(!actId){ S.acts.push({id:uid('a'), no:'I', name:'Act I'}); actId = S.acts[0].id; }
@@ -1248,10 +1340,31 @@ function addScene(actId){
   toast('Scene ' + no + ' added — rename it below the stage.');
 }
 
+function resetShow(){
+  S = seed(); ensureApps(); normalise(); save();
+  moveStack.length = 0; selected = null;
+  UI.runIdx = 0; UI.executed = []; UI.started = null; UI.dirText = '';
+  UI.propQ = ''; UI.propStatus = 'all';
+  UI.scene = S.scenes[0] ? S.scenes[0].id : null;
+  saveUI(); render();
+  toast('Reset to the demo show.');
+}
+
+function newShow(){
+  S = blankShow(); ensureApps(); normalise(); save();
+  moveStack.length = 0; selected = null;
+  UI.runIdx = 0; UI.executed = []; UI.started = null; UI.dirText = '';
+  UI.propQ = ''; UI.propStatus = 'all';
+  UI.scene = S.scenes[0] ? S.scenes[0].id : null;
+  saveUI(); go('stage');
+  toast('Blank show — add your cast, props and cues.');
+}
+
 function delScene(id){
   const sc = sceneOf(id);
   if(!sc) return;
   if(!confirm('Delete scene ' + sceneTag(id) + (sc.title?' “‘'+sc.title+'”':'') + '? Its cues and placements go with it.')) return;
+  const before = JSON.stringify(S), label = 'scene ' + sceneTag(id);
   S.scenes = S.scenes.filter(s=>s.id!==id);
   S.apps = S.apps.filter(a=>a.scene!==id);
   S.props.forEach(p=>{ p.scenes = p.scenes.filter(x=>x!==id); });
@@ -1260,7 +1373,7 @@ function delScene(id){
   // renumber the remaining scenes in that act
   sceneList().filter(s=>s.act===sc.act).forEach((s,i)=>{ s.no = String(i+1); });
   UI.scene = sceneList()[0] ? sceneList()[0].id : null;
-  save(); render(); toast('Scene deleted.');
+  save(); rememberDelete(label, before, id); render(); toast('Scene deleted — ⌘/Ctrl Z to undo.');
 }
 
 function addCast(){
@@ -1307,6 +1420,7 @@ function goNext(){
   if((UI.runIdx||0) >= list.length) return;
   UI.executed.push(list[UI.runIdx].id);
   UI.runIdx++;
+  saveUI();
   render();
 }
 
@@ -1315,6 +1429,7 @@ function goBack(){
   if(!UI.runIdx) return;
   UI.runIdx--;
   UI.executed = UI.executed.slice(0, UI.runIdx);
+  saveUI();
   render();
 }
 
@@ -1339,7 +1454,7 @@ function filterPropRows(){
    12. EVENT WIRING
    ================================================================== */
 document.addEventListener('click', e=>{
-  const el = e.target.closest('[data-view],[data-act],[data-addscene],[data-delscene],[data-place],[data-send],[data-delcast],[data-delprop],[data-delcue],[data-rmprop],[data-rmpropscene],[data-jump]');
+  const el = e.target.closest('[data-view],[data-act],[data-addact],[data-addscene],[data-delscene],[data-place],[data-send],[data-delcast],[data-delprop],[data-delcue],[data-rmprop],[data-rmpropscene],[data-jump]');
   if(!el) return;
 
   if(el.dataset.view){ go(el.dataset.view, el.dataset.scene); return; }
@@ -1349,16 +1464,11 @@ document.addEventListener('click', e=>{
     if(act==='export') exportJSON();
     else if(act==='import') document.getElementById('file').click();
     else if(act==='reset'){
-      if(confirm('Reset everything to the demo production? Your current changes will be lost.')){
-        S = seed(); ensureApps(); save(); UI.runIdx = 0; UI.executed = []; render(); toast('Reset to the demo show.');
-      }
+      if(confirm('Reset everything to the demo production? Your current changes will be lost.')) resetShow();
     }
     else if(act==='print'){ go('cuebook'); setTimeout(()=>window.print(), 60); }
     else if(act==='newshow'){
-      if(confirm('Start a blank production? The current show stays saved until you change it here, and Export makes a backup.')){
-        S = blankShow(); ensureApps(); save(); UI.runIdx = 0; UI.executed = []; UI.propQ=''; UI.propStatus='all';
-        UI.scene = S.scenes[0].id; go('stage'); toast('Blank show — add your cast, props and cues.');
-      }
+      if(confirm('Start a blank production? The current show stays saved until you change it here, and Export makes a backup.')) newShow();
     }
     else if(act==='addcast') addCast();
     else if(act==='addprop') addProp();
@@ -1385,22 +1495,36 @@ document.addEventListener('click', e=>{
   if(el.dataset.delcast){
     const c = S.cast.find(x=>x.id===el.dataset.delcast);
     if(c && confirm('Remove ' + c.role + ' (' + c.name + ') from the company?')){
+      const before = JSON.stringify(S);
       S.cast = S.cast.filter(x=>x.id!==c.id); S.apps = S.apps.filter(a=>a.cast!==c.id);
-      save(); render();
+      save(); rememberDelete('cast member ' + c.role, before, null);
+      render(); toast(c.role + ' removed — ⌘/Ctrl Z to undo.');
     }
     return;
   }
+  if(el.dataset.addact){ addAct(); return; }
   if(el.dataset.addscene){ addScene(el.dataset.addscene); return; }
   if(el.dataset.delscene){ delScene(el.dataset.delscene); return; }
 
   if(el.dataset.delprop){
     const p = propOf(el.dataset.delprop);
-    if(p && confirm('Delete prop “' + p.name + '”?')){ S.props = S.props.filter(x=>x.id!==p.id); save(); render(); }
+    if(p && confirm('Delete prop “' + p.name + '”?')){
+      const before = JSON.stringify(S);
+      S.props = S.props.filter(x=>x.id!==p.id);
+      ensurePmarks();
+      save(); rememberDelete('prop “' + p.name + '”', before, null);
+      render(); toast('Prop deleted — ⌘/Ctrl Z to undo.');
+    }
     return;
   }
   if(el.dataset.delcue){
     const c = S.cues.find(x=>x.id===el.dataset.delcue);
-    if(c && confirm('Delete cue ' + cueLabel(c) + '?')){ S.cues = S.cues.filter(x=>x.id!==c.id); save(); render(); }
+    if(c && confirm('Delete cue ' + cueLabel(c) + '?')){
+      const before = JSON.stringify(S), label = 'cue ' + cueLabel(c);
+      S.cues = S.cues.filter(x=>x.id!==c.id);
+      save(); rememberDelete(label, before, null);
+      render(); toast('Cue deleted — ⌘/Ctrl Z to undo.');
+    }
     return;
   }
   if(el.dataset.rmprop){
@@ -1450,10 +1574,28 @@ document.addEventListener('change', e=>{
     const reader = new FileReader();
     reader.onload = ()=>{
       try{
-        const data = JSON.parse(reader.result);
-        if(!data.scenes || !data.cast || !data.props || !data.cues) throw new Error('shape');
-        S = data; ensureApps(); save(); UI.runIdx = 0; UI.executed = []; render();
-        toast('Production imported.');
+        const clean = normaliseShow(JSON.parse(reader.result));
+        if(!clean) throw new Error('shape');
+        if(!confirm('Replace “' + S.show.title + '” with “' + (clean.show.title || 'Untitled production') + '”? The current show will be overwritten.')) return;
+        const prev = S, prevUI = JSON.stringify(UI);
+        try{
+          S = clean;
+          ensureApps();
+          normalise();
+          moveStack.length = 0; selected = null;
+          UI.runIdx = 0; UI.executed = []; UI.started = null; UI.dirText = '';
+          UI.propQ = ''; UI.propStatus = 'all';
+          if(!sceneOf(UI.scene)) UI.scene = sceneList()[0] ? sceneList()[0].id : null;
+          render();
+          save();
+          saveUI();
+          toast('Production imported.');
+        }catch(err){
+          S = prev;
+          try{ UI = Object.assign(UI, JSON.parse(prevUI)); }catch(e){}
+          try{ render(); }catch(e){}
+          toast('That file is not a stage management backup.');
+        }
       }catch(err){ toast('That file is not a stage management backup.'); }
     };
     reader.readAsText(file);
@@ -1516,6 +1658,26 @@ document.addEventListener('keydown', e=>{
 let tokDrag = null;
 let selected = null;
 const moveStack = [];
+let lastDelete = null, lastDeleteAt = 0;
+
+function rememberDelete(label, before, scene){
+  lastDelete = {label, before, scene};
+  lastDeleteAt = Date.now();
+}
+
+function undoDelete(){
+  if(!lastDelete){ toast('Nothing to restore.'); return; }
+  const d = lastDelete;
+  lastDelete = null;
+  try{
+    S = JSON.parse(d.before);
+    ensureApps();
+    normalise();
+    if(d.scene && sceneOf(d.scene)) UI.scene = d.scene;
+    save(); render();
+    toast('Restored ' + d.label + '.');
+  }catch(e){ toast('Could not restore that delete.'); }
+}
 
 function zoneLabel(x, y){
   const row = y < 33 ? 'US' : y < 67 ? 'CS' : 'DS';
@@ -1543,8 +1705,14 @@ function syncToken(kind, id, x, y){
   if(el){ el.style.left = x + '%'; el.style.top = y + '%'; }
 }
 
-function pushMove(kind, id, prev){
-  moveStack.push({kind, id, scene:UI.scene, prev, batch:dirBatch});
+let lastMoveAt = 0;
+function pushMove(kind, id, prev, batch){
+  if(kind === 'cast' && !('on' in prev)){
+    const a = appOf(UI.scene, id);
+    if(a) prev.on = a.on;
+  }
+  moveStack.push({kind, id, scene:UI.scene, prev, batch: batch === undefined ? 0 : batch});
+  lastMoveAt = Date.now();
   if(moveStack.length > 40) moveStack.shift();
 }
 
@@ -1553,16 +1721,13 @@ function undoMove(){
   const m = moveStack.pop();
   if(m.kind === 'cast'){
     const a = appOf(m.scene, m.id);
-    if(a){ a.x = m.prev.x; a.y = m.prev.y; }
+    if(a){ a.x = m.prev.x; a.y = m.prev.y; if('on' in m.prev) a.on = m.prev.on; }
   } else {
     const mk = pmarksIn(m.scene).find(k=>k.prop === m.id);
     if(mk){ mk.x = m.prev.x; mk.y = m.prev.y; }
   }
   save();
-  if(UI.view === 'stage' && m.scene === UI.scene){
-    syncToken(m.kind, m.id, m.prev.x, m.prev.y);
-    updateReadout(m.prev.x, m.prev.y);
-  }
+  if(UI.view === 'stage') render();
   toast('Move undone.');
 }
 
@@ -1701,8 +1866,14 @@ function dirIntent(text){
   let row = null;
   ROW_WORDS.forEach(([w,y])=>{ if(row == null && new RegExp('\\b' + w + '\\b').test(t)) row = y; });
   let col = 0;
-  if(/\b(stage left|house left|left)\b/.test(t)) col = -1;
-  else if(/\b(stage right|house right|right)\b/.test(t)) col = 1;
+  /* ground plan: back wall at the top, audience at the bottom. Stage left is
+     therefore the right side of the page; house left is the audience's side. */
+  if(/\bstage left\b/.test(t)) col = 1;
+  else if(/\bhouse left\b/.test(t)) col = -1;
+  else if(/\bleft\b/.test(t)) col = 1;
+  else if(/\bstage right\b/.test(t)) col = -1;
+  else if(/\bhouse right\b/.test(t)) col = 1;
+  else if(/\bright\b/.test(t)) col = -1;
   return {exit, enter, row, col, any: row != null || col !== 0};
 }
 
@@ -1760,7 +1931,9 @@ function spawnToken(a){
 function execStep(st, done){
   const scene = UI.scene, ms = 820;
   if(st.mode === 'layout'){
+    const before = onStage(scene).map(p=>({id:p.cast.id, x:p.x, y:p.y}));
     layoutScene(scene);
+    before.forEach(b=>pushMove('cast', b.id, {x:b.x, y:b.y, on:true}, dirBatch));
     onStage(scene).forEach(p=>{ const a = appOf(scene, p.cast.id); if(a) animateToken('cast', a.cast, a.x, a.y, ms); });
     setTimeout(()=>{ save(); done(); }, ms + 80);
     return;
@@ -1771,20 +1944,21 @@ function execStep(st, done){
       const a = appOf(scene, id);
       if(!a) return;
       if(st.mode === 'exit'){
-        pushMove('cast', id, {x:a.x, y:a.y, on:true});
+        pushMove('cast', id, {x:a.x, y:a.y, on:true}, dirBatch);
         animateToken('cast', id, a.x < 50 ? -14 : 114, a.y + 5, ms, 0);
         a.on = false;
         return;
       }
       const t = stepTarget(a, st);
       if(!a.on){
+        pushMove('cast', id, {x:a.x, y:a.y, on:false}, dirBatch);
         a.on = true;
         a.x = t.x < 50 ? -12 : 112;
         a.y = t.y;
         spawnToken(a);
         requestAnimationFrame(()=>animateToken('cast', id, t.x, t.y, ms, 1));
       } else {
-        pushMove('cast', id, {x:a.x, y:a.y, on:a.on});
+        pushMove('cast', id, {x:a.x, y:a.y, on:a.on}, dirBatch);
         a.x = t.x; a.y = t.y; a.on = true;
         animateToken('cast', id, t.x, t.y, ms);
       }
@@ -1841,9 +2015,10 @@ function runDirections(){
 
 function undoRun(){
   if(!moveStack.length){ toast('Nothing to undo.'); return; }
-  const b = moveStack[moveStack.length-1].batch || 0;
+  const b = moveStack[moveStack.length-1].batch;
+  if(!b){ toast('No moves from Run to undo.'); return; }
   let n = 0;
-  while(moveStack.length && (moveStack[moveStack.length-1].batch || 0) === b){
+  while(moveStack.length && moveStack[moveStack.length-1].batch === b){
     const m = moveStack.pop(); n++;
     if(m.kind === 'cast'){
       const a = appOf(m.scene, m.id);
@@ -1863,7 +2038,8 @@ document.addEventListener('keydown', e=>{
   if(/INPUT|TEXTAREA|SELECT/.test(tag)) return;
 
   if((e.metaKey || e.ctrlKey) && (e.key === 'z' || e.key === 'Z')){
-    if(UI.view === 'stage' && moveStack.length){ e.preventDefault(); undoMove(); }
+    if(lastDelete && (!moveStack.length || lastDeleteAt > lastMoveAt)){ e.preventDefault(); undoDelete(); }
+    else if(UI.view === 'stage' && moveStack.length){ e.preventDefault(); undoMove(); }
     return;
   }
   if(e.key === 'Escape' && UI.view === 'stage'){ selected = null; applySelection(); return; }
@@ -1885,7 +2061,7 @@ document.addEventListener('keydown', e=>{
 });
 
 document.addEventListener('keydown', e=>{
-  if(UI.view!=='run') return;
+  if(UI.view!=='run' || e.repeat) return;
   if(e.code==='Space'){ e.preventDefault(); goNext(); }
   if(e.key==='Escape'){ go('cuebook'); }
 });
@@ -1896,6 +2072,7 @@ setInterval(()=>{
 }, 1000);
 
 render();
+if(loadNotice) toast('Saved data was unreadable — started from the demo. A copy is kept in this browser.');
 </script>
 </body>
 </html>
