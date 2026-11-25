@@ -108,7 +108,8 @@ nav#nav{display:flex;flex-direction:column;gap:3px}
 .kpi .s{font-size:11.5px;color:var(--dim2);margin-top:6px}
 .cols{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr);gap:20px;align-items:start}
 .cols>*{min-width:0}
-.runorder .act{font:9.5px/1 var(--sans);letter-spacing:.18em;text-transform:uppercase;color:var(--dim2);padding:18px 20px 8px}
+.runorder .act{font:9.5px/1 var(--sans);letter-spacing:.18em;text-transform:uppercase;color:var(--dim2);padding:18px 20px 8px;cursor:pointer}
+.runorder .act:hover{color:var(--accent)}
 .srow{display:flex;align-items:center;gap:14px;padding:13px 20px;border-top:1px solid #f1eee7;cursor:pointer}
 .srow:hover{background:var(--soft2)}
 .srow .num{font:11px/1 var(--mono);color:var(--accent);width:36px;flex:0 0 36px;opacity:.9}
@@ -121,9 +122,12 @@ nav#nav{display:flex;flex-direction:column;gap:3px}
 .warn b{font-weight:600}
 
 /* ---------- scene tabs ---------- */
-.scenetabs{display:flex;gap:22px;overflow-x:auto;padding:2px 2px 16px;margin-bottom:20px;border-bottom:1px solid var(--line)}
+.tabsbar{display:flex;align-items:flex-start;gap:12px;margin-bottom:20px;border-bottom:1px solid var(--line);padding-bottom:16px}
+.scenetabs{display:flex;gap:22px;overflow-x:auto;padding:2px 2px 0;flex:1;min-width:0}
 .scenetabs .actcol{display:flex;flex-direction:column;gap:7px;flex:0 0 auto}
-.scenetabs .actlab{font:9px/1 var(--mono);letter-spacing:.14em;color:var(--dim2)}
+.scenetabs .actlab{border:0;background:none;padding:0;font:9px/1.4 var(--mono);letter-spacing:.14em;color:var(--dim2);cursor:pointer;text-align:left;white-space:nowrap;max-width:220px;overflow:hidden;text-overflow:ellipsis}
+.scenetabs .actlab:hover{color:var(--accent)}
+.tabsadd{flex:0 0 auto;margin-top:1px}
 .stab{padding:8px 13px;border-radius:9px;border:1px solid var(--line);background:#fff;color:var(--dim);font:12px/1.2 var(--sans);cursor:pointer;white-space:nowrap;text-align:left;transition:.14s}
 .stab:hover{border-color:var(--ink);color:var(--ink)}
 .stab.on{border-color:var(--accent);background:var(--accent-soft);color:var(--accent);font-weight:600}
@@ -246,6 +250,7 @@ input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-
 @media (max-width:1040px){.cols,.runwrap{grid-template-columns:minmax(0,1fr)}.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media (max-width:860px){.rail{width:68px;flex:0 0 68px;padding:16px 8px}.brand h1,.brand p,.navbtn .lab,.rail-foot{display:none}.navbtn{justify-content:center}.tb-title{max-width:40vw}.view{padding:24px 20px 60px}}
 .cue-print-scene{display:none}
+.screen-only{display:inline}
 @media print{
   html,body{height:auto;background:#fff;color:#111;overflow:visible}
   body::before,.rail,.topbar,.toast{display:none!important}
@@ -269,6 +274,7 @@ input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-
   .cuebook-tbl tr.cue-scene{display:none}
   .cuebook-tbl .cue-print-scene{display:block;font:9.5px/1.5 var(--sans);letter-spacing:.18em;text-transform:uppercase;color:var(--dim2);margin-bottom:5px}
   .cuebook-tbl thead{display:table-header-group}
+  .screen-only{display:none!important}
 }
 
 </style>
@@ -628,14 +634,20 @@ function loadState(){
 }
 let S = loadState() || seed();
 
-function save(){
-  /* any later edit makes a one-level delete undo unsafe */
-  lastDelete = null; lastDeleteAt = 0;
+const deleteStack = [];
+let lastDeleteAt = 0;
+
+function persist(){
   try{ localStorage.setItem(LS_KEY, JSON.stringify(S)); }catch(e){}
   const el = document.getElementById('save-state');
   if(el){
     el.innerHTML = '<span class="dot"></span>Saved ' + new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
   }
+}
+function save(){
+  /* any later edit makes the delete snapshots unsafe */
+  deleteStack.length = 0; lastDeleteAt = 0;
+  persist();
 }
 function uid(p){ return p + Math.random().toString(36).slice(2,7); }
 function esc(v){
@@ -789,7 +801,7 @@ function viewOverview(){
   // insert act headers
   let lastAct = null, orderHTML = '';
   scenes.forEach((s,i)=>{
-    if(s.act!==lastAct){ orderHTML += `<div class="act">${esc(S.acts.find(a=>a.id===s.act).name)}</div>`; lastAct = s.act; }
+    if(s.act!==lastAct){ orderHTML += `<div class="act" data-renameact="${s.act}" title="Rename act">${esc(S.acts.find(a=>a.id===s.act).name)}</div>`; lastAct = s.act; }
     orderHTML += running[i];
   });
 
@@ -884,11 +896,11 @@ function viewStage(){
 
   const tabs = S.acts.map(a=>{
     const inAct = scenes.filter(x=>x.act===a.id);
-    if(!inAct.length) return '';
-    return `<div class="actcol"><span class="actlab">ACT ${esc(a.no)}</span>${inAct.map(x=>
+    const label = 'ACT ' + a.no + (a.name && a.name !== 'Act ' + a.no ? ' · ' + a.name : '');
+    return `<div class="actcol"><button class="actlab" data-renameact="${a.id}" title="Rename act">${esc(label)}</button>${inAct.map(x=>
       `<button class="stab ${x.id===UI.scene?'on':''}" data-view="stage" data-scene="${x.id}">${x.no}. ${esc(x.title)}</button>`).join('')}
       <button class="stab plus" data-addscene="${a.id}">+ scene</button></div>`;
-  }).join('') + `<div class="actcol"><button class="stab plus" data-addact="1">+ act</button></div>`;
+  }).join('');
 
   const panelPlaced = placed.slice().sort((a,b)=>a.cast.role.localeCompare(b.cast.role)).map(p=>`<div class="sp-row">
       <span class="sp-dot" style="--c:${p.cast.color}">${initials(p.cast.name)}</span>
@@ -928,7 +940,10 @@ function viewStage(){
       </div>
     </div>
 
-    <div class="scenetabs">${tabs}</div>
+    <div class="tabsbar">
+      <div class="scenetabs">${tabs}</div>
+      <button class="stab plus tabsadd" data-addact="1" title="Add another act">+ act</button>
+    </div>
 
     <div class="scene-detail">
       <div>
@@ -1178,7 +1193,7 @@ function viewCueBook(){
   return `<div class="wrap">
     <div class="pagehead">
       <div><div class="sec">Cue sheet</div><div class="h2">Running order</div>
-      <div class="desc">${S.cues.length} cues across ${new Set(S.cues.map(c=>c.scene)).size} scenes. Hit ▸ to drop into the run at that cue.</div></div>
+      <div class="desc">${S.cues.length} cues across ${new Set(S.cues.map(c=>c.scene)).size} scenes.<span class="screen-only"> Hit ▸ to drop into the run at that cue.</span></div></div>
       <div style="display:flex;gap:8px">
         <button class="btn ghost" data-act="print">Print</button>
         <button class="btn primary" data-act="startrun">Start run at cue 01 ▸</button>
@@ -1333,6 +1348,18 @@ function addAct(){
   toast('Act ' + no + ' added.');
 }
 
+function renameAct(id){
+  const act = S.acts.find(a=>a.id===id);
+  if(!act) return;
+  const raw = prompt('Rename act ' + act.no, act.name || ('Act ' + act.no));
+  if(raw === null) return;
+  const name = String(raw).trim();
+  if(!name){ toast('Act name unchanged.'); return; }
+  act.name = name;
+  save(); render();
+  toast('Act ' + act.no + ' renamed to “' + name + '”.');
+}
+
 function addScene(actId){
   if(!S.acts.some(a=>a.id===actId)) actId = S.acts[0] ? S.acts[0].id : null;
   if(!actId){ S.acts.push({id:uid('a'), no:'I', name:'Act I'}); actId = S.acts[0].id; }
@@ -1377,7 +1404,8 @@ function delScene(id){
   // renumber the remaining scenes in that act
   sceneList().filter(s=>s.act===sc.act).forEach((s,i)=>{ s.no = String(i+1); });
   UI.scene = sceneList()[0] ? sceneList()[0].id : null;
-  save(); rememberDelete(label, before, id); render(); toast('Scene deleted — ⌘/Ctrl Z to undo.');
+  rememberDelete(label, before, id); persist();
+  render(); toast('Scene deleted — ⌘/Ctrl Z to undo.');
 }
 
 function addCast(){
@@ -1458,7 +1486,7 @@ function filterPropRows(){
    12. EVENT WIRING
    ================================================================== */
 document.addEventListener('click', e=>{
-  const el = e.target.closest('[data-view],[data-act],[data-addact],[data-addscene],[data-delscene],[data-place],[data-send],[data-delcast],[data-delprop],[data-delcue],[data-rmprop],[data-rmpropscene],[data-jump]');
+  const el = e.target.closest('[data-view],[data-act],[data-addact],[data-addscene],[data-delscene],[data-renameact],[data-place],[data-send],[data-delcast],[data-delprop],[data-delcue],[data-rmprop],[data-rmpropscene],[data-jump]');
   if(!el) return;
 
   if(el.dataset.view){ go(el.dataset.view, el.dataset.scene); return; }
@@ -1501,7 +1529,7 @@ document.addEventListener('click', e=>{
     if(c && confirm('Remove ' + c.role + ' (' + c.name + ') from the company?')){
       const before = JSON.stringify(S);
       S.cast = S.cast.filter(x=>x.id!==c.id); S.apps = S.apps.filter(a=>a.cast!==c.id);
-      save(); rememberDelete('cast member ' + c.role, before, null);
+      rememberDelete('cast member ' + c.role, before, null); persist();
       render(); toast(c.role + ' removed — ⌘/Ctrl Z to undo.');
     }
     return;
@@ -1509,6 +1537,7 @@ document.addEventListener('click', e=>{
   if(el.dataset.addact){ addAct(); return; }
   if(el.dataset.addscene){ addScene(el.dataset.addscene); return; }
   if(el.dataset.delscene){ delScene(el.dataset.delscene); return; }
+  if(el.dataset.renameact){ renameAct(el.dataset.renameact); return; }
 
   if(el.dataset.delprop){
     const p = propOf(el.dataset.delprop);
@@ -1516,7 +1545,7 @@ document.addEventListener('click', e=>{
       const before = JSON.stringify(S);
       S.props = S.props.filter(x=>x.id!==p.id);
       ensurePmarks();
-      save(); rememberDelete('prop “' + p.name + '”', before, null);
+      rememberDelete('prop “' + p.name + '”', before, null); persist();
       render(); toast('Prop deleted — ⌘/Ctrl Z to undo.');
     }
     return;
@@ -1526,7 +1555,7 @@ document.addEventListener('click', e=>{
     if(c && confirm('Delete cue ' + cueLabel(c) + '?')){
       const before = JSON.stringify(S), label = 'cue ' + cueLabel(c);
       S.cues = S.cues.filter(x=>x.id!==c.id);
-      save(); rememberDelete(label, before, null);
+      rememberDelete(label, before, null); persist();
       render(); toast('Cue deleted — ⌘/Ctrl Z to undo.');
     }
     return;
@@ -1662,24 +1691,24 @@ document.addEventListener('keydown', e=>{
 let tokDrag = null;
 let selected = null;
 const moveStack = [];
-let lastDelete = null, lastDeleteAt = 0;
 
 function rememberDelete(label, before, scene){
-  lastDelete = {label, before, scene};
+  deleteStack.push({label, before, scene});
+  if(deleteStack.length > 20) deleteStack.shift();
   lastDeleteAt = Date.now();
 }
 
 function undoDelete(){
-  if(!lastDelete){ toast('Nothing to restore.'); return; }
-  const d = lastDelete;
-  lastDelete = null;
+  if(!deleteStack.length){ toast('Nothing to restore.'); return; }
+  const d = deleteStack.pop();
   try{
     S = JSON.parse(d.before);
     ensureApps();
     normalise();
     if(d.scene && sceneOf(d.scene)) UI.scene = d.scene;
-    save(); render();
-    toast('Restored ' + d.label + '.');
+    persist(); render();
+    const left = deleteStack.length;
+    toast('Restored ' + d.label + (left ? ' — ' + left + ' more delete' + (left === 1 ? '' : 's') + ' to undo.' : '.'));
   }catch(e){ toast('Could not restore that delete.'); }
 }
 
@@ -2042,7 +2071,7 @@ document.addEventListener('keydown', e=>{
   if(/INPUT|TEXTAREA|SELECT/.test(tag)) return;
 
   if((e.metaKey || e.ctrlKey) && (e.key === 'z' || e.key === 'Z')){
-    if(lastDelete && (!moveStack.length || lastDeleteAt > lastMoveAt)){ e.preventDefault(); undoDelete(); }
+    if(deleteStack.length && (!moveStack.length || lastDeleteAt > lastMoveAt)){ e.preventDefault(); undoDelete(); }
     else if(UI.view === 'stage' && moveStack.length){ e.preventDefault(); undoMove(); }
     return;
   }

@@ -12,7 +12,9 @@ missing props or unassigned cues.
 
 **Scenes & stage** — a plan view of a half-round floor: flat back wall upstage, arc into the
 audience. Actors are coloured discs, props are tags preset along the back wall. Drag either
-one and the position saves to that scene. **+ act** at the end of the scene tabs adds another act.
+one and the position saves to that scene. **+ act** sits outside the scene tabs, at the right edge of
+the tab strip, and adds another act. Click an act label in the tabs (or the act heading on
+Overview) to rename it.
 
 **Cast & doubling** — enter/exit counts per character, doubling notes per track.
 
@@ -29,7 +31,8 @@ and called list survive a refresh.
 ## Moving people
 
 Drag a token, or click one and nudge it with the arrow keys (hold Shift for 5% steps).
-⌘/Ctrl Z undoes the last move or the last delete, Delete sends the selected actor to the wings.
+⌘/Ctrl Z undoes the last move or steps back through the last deletes (up to 20; cleared when you
+edit again). Delete sends the selected actor to the wings.
 
 Better still, type the blocking into **Movement directions** and press **Run moves**
 (⌘/Ctrl ↵ also works):
