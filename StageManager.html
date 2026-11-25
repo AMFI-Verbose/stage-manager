@@ -245,6 +245,7 @@ input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-
 @media (max-width:1180px){.scene-detail{grid-template-columns:minmax(0,1fr)}.side{display:grid;grid-template-columns:1fr 1fr;gap:16px}}
 @media (max-width:1040px){.cols,.runwrap{grid-template-columns:minmax(0,1fr)}.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media (max-width:860px){.rail{width:68px;flex:0 0 68px;padding:16px 8px}.brand h1,.brand p,.navbtn .lab,.rail-foot{display:none}.navbtn{justify-content:center}.tb-title{max-width:40vw}.view{padding:24px 20px 60px}}
+.cue-print-scene{display:none}
 @media print{
   html,body{height:auto;background:#fff;color:#111;overflow:visible}
   body::before,.rail,.topbar,.toast{display:none!important}
@@ -265,6 +266,8 @@ input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-
   .cuebook-tbl td{padding:6px 7px;font-size:11px}
   .cuebook-tbl td:nth-child(3){min-width:0!important}
   .cuebook-tbl tr{break-inside:avoid;page-break-inside:avoid}
+  .cuebook-tbl tr.cue-scene{display:none}
+  .cuebook-tbl .cue-print-scene{display:block;font:9.5px/1.5 var(--sans);letter-spacing:.18em;text-transform:uppercase;color:var(--dim2);margin-bottom:5px}
   .cuebook-tbl thead{display:table-header-group}
 }
 
@@ -1154,15 +1157,16 @@ function viewCues(){
 function viewCueBook(){
   let lastScene = null;
   const rows = cueList().map((c,i)=>{
-    const head = c.scene !== lastScene
-      ? `<tr><td colspan="7" style="padding:14px 12px 6px;border-bottom:0"><span class="sec" style="margin:0">${sceneTag(c.scene)} · ${esc(sceneTitle(c.scene))} — ${esc((sceneOf(c.scene)||{}).duration||'')}</span></td></tr>`
+    const first = c.scene !== lastScene;
+    const head = first
+      ? `<tr class="cue-scene"><td colspan="7" style="padding:14px 12px 6px;border-bottom:0"><span class="sec" style="margin:0">${sceneTag(c.scene)} · ${esc(sceneTitle(c.scene))} — ${esc((sceneOf(c.scene)||{}).duration||'')}</span></td></tr>`
       : '';
     lastScene = c.scene;
     const done = UI.executed.includes(c.id);
     return head + `<tr style="${done?'opacity:.45':''}">
       <td style="width:70px"><span class="badge ${TYPES[c.type].cls}">${cueLabel(c)}</span></td>
       <td style="width:60px" class="mono dim2">${sceneTag(c.scene)}</td>
-      <td style="min-width:280px"><div style="font-size:13px;line-height:1.4">${esc(c.desc)}</div>
+      <td style="min-width:280px">${first?'<div class="cue-print-scene">'+sceneTag(c.scene)+' · '+esc(sceneTitle(c.scene))+' — '+esc((sceneOf(c.scene)||{}).duration||'')+'</div>':''}<div style="font-size:13px;line-height:1.4">${esc(c.desc)}</div>
         ${c.note?`<div class="dim2" style="font-size:10.5px;margin-top:2px">${esc(c.note)}</div>`:''}</td>
       <td style="width:130px" class="dim" >${esc(c.trig)}</td>
       <td style="width:64px" class="mono dim2">${esc(c.dur||'—')}</td>
