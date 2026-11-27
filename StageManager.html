@@ -171,6 +171,31 @@ nav#nav{display:flex;flex-direction:column;gap:3px}
 .prop-token .sq{width:8px;height:8px;border-radius:2px;background:#b3a487;flex:0 0 8px}
 .prop-token span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 
+/* ---------- house orientation ---------- */
+.stage-canvas.up{border-radius:50% 50% 0 0 / 100% 100% 0 0;
+  background:radial-gradient(ellipse 96% 192% at 50% 100%, #fffefb 0%, #fbf8f1 62%, #f4f0e8 100%)}
+.stage-canvas.up::before{
+  background:
+    repeating-radial-gradient(ellipse 100% 100% at 50% 100%, transparent 0 32.6%, rgba(0,0,0,.035) 32.6% 32.95%, transparent 32.95% 33%),
+    repeating-radial-gradient(ellipse 100% 100% at 50% 100%, transparent 0 65.6%, rgba(0,0,0,.035) 65.6% 65.95%, transparent 65.95% 66%),
+    linear-gradient(90deg,transparent 49.7%,rgba(0,0,0,.045) 49.85%,rgba(0,0,0,.045) 50.15%,transparent 50.3%)}
+.floorwrap.up{border-radius:50% 50% 0 0 / 100% 100% 0 0;
+  background:radial-gradient(ellipse 96% 192% at 50% 100%,#fffefb,#f6f2ea)}
+.segs{display:flex;flex-direction:row;flex-wrap:nowrap;border:1px solid var(--line2);border-radius:9px;overflow:hidden;background:#fff;flex:0 0 auto}
+.segs button{flex:0 0 auto;border:0;border-right:1px solid var(--line2);background:transparent;padding:6px 9px;font:11px/1.45 var(--sans);color:var(--dim);cursor:pointer;white-space:nowrap;line-height:1.2}
+.segs button:last-child{border-right:0}
+.segs button:hover{background:var(--soft2)}
+.segs button.on{background:var(--accent-soft);color:var(--accent);font-weight:600}
+.facegrp{display:flex;align-items:center;gap:7px}
+.facegrp .k{font:9px/1 var(--mono);letter-spacing:.16em;color:var(--dim2)}
+.stagebar{display:flex;flex-wrap:wrap;gap:12px 20px;align-items:flex-end;
+  background:#fff;border:1px solid var(--line);border-radius:14px;padding:12px 14px;margin:0 0 20px;box-shadow:var(--shadow)}
+.stagebar .grp{display:flex;flex-direction:column;gap:6px;min-width:0}
+.stagebar .grp .k{font:9px/1 var(--mono);letter-spacing:.16em;color:var(--dim2)}
+.stagebar .grp.inline{flex-direction:row;align-items:center;gap:8px}
+.stagebar .grp.inline .k{margin-right:2px}
+.stagebar .spacer{flex:1 1 auto}
+
 .actor-token.sel{box-shadow:0 0 0 4px var(--accent-soft),0 0 0 5px rgba(163,58,49,.34),0 7px 20px rgba(40,32,24,.18)}
 .prop-token.sel{box-shadow:0 0 0 3px var(--accent-soft),0 0 0 4px rgba(163,58,49,.3),0 5px 14px rgba(40,32,24,.14)}
 .stage-readout{font:10px/1.3 var(--mono);letter-spacing:.08em;color:#7a7266;background:rgba(255,255,255,.86);border:1px solid var(--line);border-radius:7px;padding:4px 8px;pointer-events:none;opacity:.66;transform:none}
@@ -211,18 +236,68 @@ nav#nav{display:flex;flex-direction:column;gap:3px}
 .cue-mini .no{font:10px/1.8 var(--mono);color:var(--dim2);flex:0 0 38px}
 .cue-mini .tx{flex:1;line-height:1.5}
 
+/* ---------- live board (backstage) ---------- */
+.live{max-width:1160px;margin:0 auto;padding-bottom:112px}
+.livehead{display:flex;align-items:flex-end;justify-content:space-between;gap:18px;flex-wrap:wrap;margin-bottom:16px}
+.livehead .tag{font:10px/1 var(--mono);letter-spacing:.2em;color:var(--dim2);text-transform:uppercase}
+.livehead h2{font:600 30px/1.15 var(--serif);letter-spacing:-.01em;margin:7px 0 5px}
+.livehead .sub{font-size:12.5px;color:var(--dim)}
+.liveclock{text-align:right;min-width:86px}
+.liveclock .k{font:9px/1 var(--mono);letter-spacing:.16em;color:var(--dim2);margin-bottom:7px}
+.liveclock .v{font:600 24px/1 var(--mono);font-variant-numeric:tabular-nums}
+.livegrid{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);gap:18px;align-items:start}
+@media (max-width:1040px){.livegrid{grid-template-columns:minmax(0,1fr)}}
+.floorcard{padding:18px 18px 16px}
+.floorwrap{position:relative;height:clamp(220px,30vh,320px);border-radius:0 0 50% 50% / 0 0 100% 100%;
+  background:radial-gradient(ellipse 96% 192% at 50% 0%,#fffefb,#f6f2ea);box-shadow:inset 0 0 0 1px #e3dcd0}
+.floorwrap.small{height:clamp(120px,15vh,150px);margin-top:10px}
+.ltok{position:absolute;transform:translate(-50%,-50%);width:48px;height:48px;border-radius:50%;background:#fff;border:2px solid var(--c,#888);
+  display:grid;place-items:center;font:600 11px/1 var(--sans);color:var(--c,#444);box-shadow:0 2px 7px rgba(40,32,24,.15)}
+.floorwrap.small .ltok{width:30px;height:30px;font-size:8.5px;border-width:1.5px}
+.ltok.ok{box-shadow:0 0 0 3px #d7eee0}
+.ltok .llbl{position:absolute;top:100%;margin-top:3px;font:9px/1.2 var(--sans);color:#5b616b;background:rgba(255,255,255,.94);padding:0 3px;border-radius:3px;white-space:nowrap;max-width:86px;overflow:hidden;text-overflow:ellipsis}
+.ltok.edge-l .llbl{left:-20px;transform:none}
+.ltok.edge-r .llbl{left:auto;right:-20px;transform:none}
+.floorwrap.small .ltok .llbl{display:none}
+.lprop{position:absolute;transform:translate(-50%,-50%);font:9px/1.3 var(--sans);color:#6b6151;background:#fff;border:1px solid #e0d8c8;border-left:2px solid #9a8a6e;
+  border-radius:4px;padding:1px 4px;max-width:88px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.floorwrap.small .lprop{font-size:8px;max-width:60px}
+.setrow{display:flex;flex-wrap:wrap;gap:6px;margin-top:14px}
+.chipbtn{display:inline-flex;align-items:center;gap:6px;padding:8px 11px;border-radius:9px;border:1px solid var(--line2);background:#fff;
+  font:11.5px/1.25 var(--sans);color:var(--ink);cursor:pointer;transition:.12s}
+.chipbtn:hover{border-color:var(--accent)}
+.chipbtn i{width:7px;height:7px;border-radius:2px;background:var(--c,#888);flex:0 0 7px}
+.chipbtn.ok{background:#f1f9f4;border-color:#93c3a6;color:#2c6746}
+.chipbtn.ok .tick{font-size:10px;color:#2c6746}
+.livbar{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
+.livbar .btn{flex:1;min-width:118px;justify-content:center}
+.livefoot{position:sticky;bottom:0;margin-top:16px;padding:12px 2px 8px;background:linear-gradient(180deg,rgba(243,240,234,0),rgba(243,240,234,.94) 38%)}
+.livefoot .gobtn{margin-top:0}
+.nextline{display:flex;gap:8px;align-items:baseline;font-size:12px;line-height:1.5;margin-top:8px}
+.nextline .k{font:9px/1.6 var(--mono);letter-spacing:.12em;color:var(--dim2);flex:0 0 48px}
+.called-mini{max-height:150px;overflow-y:auto}
+
+@media (max-width:720px){
+  .app{display:block}
+  .rail{width:auto;flex:none;position:sticky;top:0;z-index:22;border-right:0;border-bottom:1px solid var(--line);padding:8px 12px 6px;background:#fbf9f5}
+  .brand{padding:0 2px 8px}
+  .brand-mark{width:30px;height:30px;border-radius:8px;font-size:11px}
+  .brand h1{font-size:13px}
+  .brand p{display:none}
+  .rail-foot{display:none}
+  nav#nav{flex-direction:row;overflow-x:auto;gap:6px;padding-bottom:2px}
+  .navbtn{padding:8px 11px;font-size:12px;white-space:nowrap;flex:0 0 auto}
+  .navbtn .n{display:none}
+  .navbtn.on::before{display:none}
+  .topbar{height:auto;flex-basis:auto;padding:10px 14px;gap:10px}
+  .tb-eyebrow{display:none}
+  .tb-title{font-size:15px}
+  .view{padding:18px 14px 90px}
+  .livehead h2{font-size:23px}
+  .liveclock .v{font-size:19px}
+  .gobtn{padding:20px;font-size:18px}
+}
 /* ---------- run ---------- */
-.run-stage-card{border:1px solid var(--line);border-radius:18px;background:var(--paper);padding:14px 16px 12px;margin-bottom:16px;box-shadow:var(--shadow)}
-.run-stage-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:10px}
-.run-stage-canvas{position:relative;height:clamp(180px,24vh,260px);overflow:hidden;
-  border-radius:0 0 50% 50% / 0 0 100% 100%;
-  background:
-    linear-gradient(90deg,transparent 49.7%,rgba(0,0,0,.045) 49.85%,rgba(0,0,0,.045) 50.15%,transparent 50.3%),
-    radial-gradient(ellipse 96% 192% at 50% 0%, #fffefb 0%, #fbf8f1 62%, #f4f0e8 100%);
-  box-shadow:0 0 0 1px #d8d1c4, inset 0 3px 0 rgba(255,255,255,.95)}
-.run-stage-canvas .actor-token{width:46px;height:46px;font-size:11px;border-width:2px;cursor:default;pointer-events:none}
-.run-stage-canvas .actor-token .lbl{display:none}
-.run-stage-note{font-size:11px;color:var(--dim2);margin-top:9px;text-align:center;letter-spacing:.02em}
 .runwrap{display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:20px;align-items:start}
 .runside{min-width:0;display:flex;flex-direction:column;gap:16px}
 .gostage{border:1px solid var(--line);border-radius:18px;background:var(--paper);padding:34px;position:relative;overflow:hidden;box-shadow:var(--shadow)}
@@ -573,6 +648,83 @@ function pathOf(scene, castId){
   return a && Array.isArray(a.path) ? a.path : [];
 }
 
+function persistUI(){ saveUI(); }
+
+/* how the house sits on screen: flip up/down, mirror left/right */
+function tf(x, y){
+  return {x: UI.mirror ? 100 - x : x, y: UI.face === 'u' ? 100 - y : y};
+}
+function tfBack(x, y){
+  return {x: UI.mirror ? 100 - x : x, y: UI.face === 'u' ? 100 - y : y};
+}
+const MOVE_SPEED = [2.6, 1.5, 0.85];
+
+function stagePts(sceneId){
+  const m = {};
+  onStage(sceneId).forEach(p=>{ m[p.cast.id] = {x:p.x, y:p.y}; });
+  return m;
+}
+
+/* remember where everyone stood, so the next render can walk them across */
+let pendingFrom = null;
+function queueMove(fromId, toId){
+  if(!UI.auto || !fromId || !toId || fromId === toId) return;
+  pendingFrom = stagePts(fromId);
+}
+
+function playMove(){
+  if(!pendingFrom) return;
+  const from = pendingFrom; pendingFrom = null;
+  const dur = MOVE_SPEED[UI.speed] != null ? MOVE_SPEED[UI.speed] : 1.5;
+  const nodes = document.querySelectorAll('#stage-canvas .actor-token, #live-main .ltok');
+  const runCue = UI.view === 'run' ? currentRunCue() : null;
+  const pathIds = new Set(runCue ? onStage(runCue.scene).filter(p=>{
+    const a = appOf(runCue.scene, p.cast.id);
+    return a && Array.isArray(a.path) && a.path.length;
+  }).map(p=>p.cast.id) : []);
+  Array.from(nodes).filter(el=>el.dataset.id).forEach((el, i)=>{
+    if(el.closest('#live-main') && pathIds.has(el.dataset.id)) return;
+    const tx = parseFloat(el.style.left), ty = parseFloat(el.style.top);
+    if(isNaN(tx) || isNaN(ty)) return;
+    const f = from[el.dataset.id];
+    const start = f ? tf(f.x, f.y) : {x: tx < 50 ? -8 : 108, y: ty};
+    el.style.transition = 'none';
+    el.style.left = start.x + '%';
+    el.style.top  = start.y + '%';
+    el.style.opacity = f ? '1' : '.25';
+    void el.offsetWidth;
+    setTimeout(()=>{
+      el.style.transition = 'left ' + dur + 's cubic-bezier(.22,.61,.36,1), top ' + dur +
+                            's cubic-bezier(.22,.61,.36,1), opacity ' + (dur * .55) + 's ease';
+      el.style.left = tx + '%';
+      el.style.top  = ty + '%';
+      el.style.opacity = '1';
+    }, 30 + i * 55);
+  });
+}
+
+/* walk everybody in from the wings to their marks */
+function lineUp(){
+  const dur = MOVE_SPEED[UI.speed] != null ? MOVE_SPEED[UI.speed] : 1.5;
+  Array.from(document.querySelectorAll('#stage-canvas .actor-token')).forEach((el, i)=>{
+    const tx = parseFloat(el.style.left), ty = parseFloat(el.style.top);
+    if(isNaN(tx) || isNaN(ty)) return;
+    el.style.transition = 'none';
+    el.style.left = (tx < 50 ? -9 : 109) + '%';
+    el.style.top  = ty + '%';
+    el.style.opacity = '.3';
+    void el.offsetWidth;
+    setTimeout(()=>{
+      el.style.transition = 'left ' + dur + 's cubic-bezier(.22,.61,.36,1), top ' + dur +
+                            's cubic-bezier(.22,.61,.36,1), opacity ' + (dur * .45) + 's ease';
+      el.style.left = tx + '%';
+      el.style.top  = ty + '%';
+      el.style.opacity = '1';
+    }, 40 + i * 90);
+  });
+  toast(T('Lining up from the wings.'));
+}
+
 function layoutScene(scene){
   const list = S.apps.filter(a=>a.scene===scene && a.on && a.x!=null);
   const n = list.length;
@@ -775,7 +927,7 @@ const NAV = [
   ['run','Run Show'],
   ['settings','Settings']
 ];
-let UI = {view:'overview', scene:'s1', propQ:'', propStatus:'all', cueType:'all', runIdx:0, started:null, executed:[], lang:'en'};
+let UI = {view:'overview', scene:'s1', propQ:'', propStatus:'all', cueType:'all', runIdx:0, started:null, executed:[], lang:'en', face:'d', mirror:false, auto:true, speed:1};
 try{
   const u = JSON.parse(localStorage.getItem(LS_UI)||'null');
   if(u && u.view){
@@ -784,6 +936,10 @@ try{
     UI.runIdx = Number.isInteger(u.runIdx) ? u.runIdx : 0;
     UI.executed = Array.isArray(u.executed) ? u.executed : [];
     UI.lang = u.lang === 'zh' ? 'zh' : 'en';
+    UI.face = u.face === 'u' ? 'u' : 'd';
+    UI.mirror = !!u.mirror;
+    UI.auto = u.auto !== false;
+    UI.speed = [0,1,2].indexOf(u.speed) >= 0 ? u.speed : 1;
   }
 }catch(e){}
 UI.lang = UI.lang === 'zh' ? 'zh' : 'en';
@@ -997,11 +1153,63 @@ const ZH = {
   'Select an actor first.': '请先选择一个演员。',
   'Recording path — click the floor to add points.': '正在录制轨迹——点击舞台添加路径点。',
   'Editing path — click the floor to add points.': '正在编辑轨迹——点击舞台添加路径点。',
-  'Stage · {tag}': '舞台 · {tag}',
+
   'Replay movement': '重播移动',
   'One actor follows a recorded path.': '1 位演员沿已录制轨迹移动。',
   '{n} actors follow a recorded path.': '{n} 位演员沿已录制轨迹移动。',
   'No recorded paths in this scene.': '本场景还没有录制轨迹。',
+  /* stage bar / house / auto-move */
+  'DURATION': '时长',
+  'COPY BLOCKING': '复制走位',
+  'from another scene…': '从其他场景…',
+  'HOUSE': '观众方向',
+  'Audience at the bottom': '观众在下方',
+  'Audience at the top': '观众在上方',
+  'Mirror the floor': '镜像舞台',
+  'AUTO-MOVE': '自动移动',
+  'Walk the cast to their new marks when the scene changes': '换场时让演员走到新位置',
+  'on': '开',
+  'off': '关',
+  'slow · 2.6s': '慢 · 2.6s',
+  'normal': '正常',
+  'quick': '快',
+  'Send everyone to the wings, then walk them on': '让所有人先到侧台，再走上台',
+  'Line up': '列队上场',
+  'Spread the cast evenly across the floor': '把演员均匀分布在舞台上',
+  'Spread': '均匀分布',
+  'Mirrored': '已镜像',
+  'MIRRORED': '镜像',
+  'audience top': '观众在上方',
+  'audience bottom': '观众在下方',
+  'Auto-move on — the cast walks to their marks.': '自动移动已开启——演员会走到新位置。',
+  'Auto-move off.': '自动移动已关闭。',
+  'Lining up from the wings.': '正在从侧台列队上场。',
+  'Last scene with cues.': '已经是最后一场有提示的场景。',
+  'First scene with cues.': '已经是第一场有提示的场景。',
+  'Plan view of the half-round floor — back wall behind the cast, audience around the arc. Use HOUSE to flip the plan (audience top or bottom) or mirror it, so it matches the side of the stage you are standing on. Drag a circle or a tag anywhere inside the curve; the position saves to this scene. Click a token to select it, nudge with the arrow keys (hold Shift for 5% steps), ⌘/Ctrl Z to undo. Or write a note in Movement directions and let the app walk the blocking for you. Record a path for an actor under Movement paths; it plays in Run show.': '半圆舞台平面图——背景墙在演员身后，观众环绕弧区。用 HOUSE 翻转平面（观众在上或在下）或镜像，让它与你所站的一侧一致。拖动圆圈或标签到弧线内任意位置，位置会保存到本场景。点击标记可选中，用方向键微调（按住 Shift 每次 5%），⌘/Ctrl Z 撤销。也可以在“走位指令”里写一句话，让应用自动走位。在“移动轨迹”里为演员录制一条路径，它会在演出执行中播放。',
+  /* run board */
+  'Scene {tag} · {act}': '场景 {tag} · {act}',
+  '{on} on stage · {wings} in the wings · {cues} in this scene': '{on} 人在台上 · {wings} 人在侧台 · 本场景 {cues}',
+  'CUE': '提示',
+  'Now on stage · {checked}/{total} checked': '当前在台上 · 已签到 {checked}/{total}',
+  'Clear checks': '清除签到',
+  'nobody placed on this floor': '舞台上没有安排演员',
+  'WINGS': '侧台',
+  'PATHS': '轨迹',
+  'Standby': '待命',
+  '{n} after this one': '之后还有 {n}',
+  'Last cue of the show. Stand by for the call.': '最后一条提示。等待收官。',
+  'THEN': '随后',
+  'Now cueing': '当前提示',
+  'Next scene · {tag} {title}': '下一场 · {tag} {title}',
+  'ENTERS': '上场',
+  'EXITS': '下场',
+  'Previous scene': '上一场',
+  'Next scene': '下一场',
+  'SPACE = GO · ESC = LEAVE · TAP A NAME TO CHECK IT OFF': '空格 = GO · ESC = 离开 · 点名字签到',
+  'No cues yet': '还没有提示',
+  'The run board follows the cue list. Add SFX, LFX or prop cues first.': '执行板按提示表顺序推进。请先添加声音、灯光或道具提示。',
+  'Go to Sound & Light': '前往声光',
   /* run */
   'No cues to call yet. Add cues in Sound & Light first.': '还没有可执行的提示。请先在“声光”里添加。',
   'CURTAIN DOWN': '落幕',
@@ -1111,12 +1319,14 @@ function setLanguage(lang){
 function saveUI(){
   try{
     localStorage.setItem(LS_UI, JSON.stringify({view:UI.view, scene:UI.scene, runIdx:UI.runIdx,
-                                                started:UI.started, executed:UI.executed, lang:UI.lang}));
+                                                started:UI.started, executed:UI.executed, lang:UI.lang,
+                                                face:UI.face, mirror:UI.mirror, auto:UI.auto, speed:UI.speed}));
   }catch(e){}
 }
 
 function go(view, scene){
   if(pathMode && (view !== 'stage' || (scene && scene !== pathMode.scene))) pathMode = null;
+  if(view === 'stage' && scene && scene !== UI.scene) queueMove(UI.scene, scene);
   UI.view = view;
   try{ selected = (view === 'stage' && !scene) ? selected : null; }catch(err){}
   if(scene) UI.scene = scene;
@@ -1148,6 +1358,7 @@ function render(){
   if(UI.view === 'stage'){
     try{ applySelection(); updateReadout(null); }catch(err){}
   }
+  try{ playMove(); }catch(err){}
   if(UI.view === 'run'){
     try{ syncRunMotion(); }catch(err){}
   }
@@ -1260,19 +1471,16 @@ function viewOverview(){
    5. VIEW — SCENES & VIRTUAL STAGE
    ================================================================== */
 function tokCast(p){
-  const c = p.cast;
-  return `<span class="actor-token" data-kind="cast" data-id="${c.id}" style="left:${p.x}%;top:${p.y}%;--c:${c.color}" title="${esc(c.role)} — ${esc(c.name)}">${initials(c.name)}<span class="lbl">${esc(c.role)}</span></span>`;
+  const c = p.cast, v = tf(p.x, p.y);
+  return `<span class="actor-token" data-kind="cast" data-id="${c.id}" style="left:${v.x}%;top:${v.y}%;--c:${c.color}" title="${esc(c.role)} — ${esc(c.name)}">${initials(c.name)}<span class="lbl">${esc(c.role.split('/')[0].trim())}</span></span>`;
 }
 
 function tokProp(m){
   const pr = propOf(m.prop);
   const nm = pr.name.length > 20 ? pr.name.slice(0,19) + '…' : pr.name;
-  return `<span class="prop-token" data-kind="prop" data-id="${pr.id}" style="left:${m.x}%;top:${m.y}%" title="${esc(pr.name)} · x${pr.qty} · ${esc(pr.loc||'')}"><span class="sq"></span><span>${esc(nm)}</span></span>`;
-}
-
-function tokRun(p){
-  const c = p.cast;
-  return `<span class="actor-token run-token" data-run-id="${c.id}" style="left:${p.x}%;top:${p.y}%;--c:${c.color}" title="${esc(c.role)} — ${esc(c.name)}">${initials(c.name)}<span class="lbl">${esc(c.role)}</span></span>`;
+  const v = tf(m.x, m.y);
+  const anchor = v.y > 88 ? 'translate(-50%,-100%)' : (v.y < 10 ? 'translate(-50%,0)' : 'translate(-50%,-50%)');
+  return `<span class="prop-token" data-kind="prop" data-id="${pr.id}" style="left:${v.x}%;top:${v.y}%;transform:${anchor}" title="${esc(pr.name)} · x${pr.qty} · ${esc(pr.loc||'')}"><span class="sq"></span><span>${esc(nm)}</span></span>`;
 }
 
 /* ---------- recorded movement paths ---------- */
@@ -1283,11 +1491,12 @@ function pathOverlayHTML(){
   const rec = !!(pathMode && pathMode.scene === UI.scene && pathMode.cast === selected.id);
   const pts = rec ? pathMode.points : (Array.isArray(a.path) ? a.path : []);
   if(!pts.length) return '';
-  const start = a.on ? {x:a.x, y:a.y} : null;
-  const all = start ? [start].concat(pts) : pts;
+  const start = a.on ? tf(a.x, a.y) : null;
+  const screenPts = pts.map(p=>tf(p.x, p.y));
+  const all = start ? [start].concat(screenPts) : screenPts;
   const line = all.map(p=>Number(p.x).toFixed(2) + ',' + Number(p.y).toFixed(2)).join(' ');
-  const dots = pts.map(p=>`<circle class="path-dot${rec?' recording':''}" cx="${Number(p.x).toFixed(2)}" cy="${Number(p.y).toFixed(2)}" r="${rec?1.5:1.1}" vector-effect="non-scaling-stroke"></circle>`).join('');
-  const nums = rec ? pts.map((p,i)=>`<span class="path-num" style="left:${p.x}%;top:${p.y}%">${i+1}</span>`).join('') : '';
+  const dots = screenPts.map(p=>`<circle class="path-dot${rec?' recording':''}" cx="${Number(p.x).toFixed(2)}" cy="${Number(p.y).toFixed(2)}" r="${rec?1.5:1.1}" vector-effect="non-scaling-stroke"></circle>`).join('');
+  const nums = rec ? screenPts.map((p,i)=>`<span class="path-num" style="left:${p.x}%;top:${p.y}%">${i+1}</span>`).join('') : '';
   return `<svg class="path-layer" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
     <polyline class="path-line${rec?' recording':''}" points="${line}" vector-effect="non-scaling-stroke"></polyline>${dots}
   </svg>${nums}`;
@@ -1398,13 +1607,6 @@ function viewStage(){
         <div class="desc">${placed.length} ${T('on stage')} · ${wings.length} ${T('in the wings')} · ${pl(sceneProps.length,'prop')} · ${pl(sceneCues.length,'cue')}</div>
       </div>
       <div style="display:flex;gap:9px;align-items:flex-end;flex-wrap:wrap">
-        <div><label class="sec" style="margin:0 0 6px">${T('Duration')}</label><input class="inp" style="width:112px" data-k="scene" data-i="${sc.id}" data-f="duration" value="${esc(sc.duration||'')}"></div>
-        <select class="sel" style="width:198px" data-copyfrom="${sc.id}">
-          <option value="">${T('Copy blocking from…')}</option>
-          ${scenes.filter(x=>x.id!==sc.id).map(x=>`<option value="${x.id}">${sceneTag(x.id)} · ${esc(x.title)}</option>`).join('')}
-          <option value="__clear">${T('Clear everyone off stage')}</option>
-        </select>
-        <button class="btn" data-act="autoarrange">${T('Auto-arrange')}</button>
         <button class="btn" data-view="cuebook">${T('Cue sheet')}</button>
         <button class="btn ghost danger" data-delscene="${sc.id}">${T('Delete scene')}</button>
       </div>
@@ -1415,17 +1617,45 @@ function viewStage(){
       <button class="stab plus tabsadd" data-addact="1" title="${T('Add another act')}">${T('+ act')}</button>
     </div>
 
+    <div class="stagebar">
+      <div class="grp"><span class="k">${T('DURATION')}</span><input class="inp" style="width:104px" data-k="scene" data-i="${sc.id}" data-f="duration" value="${esc(sc.duration||'')}"></div>
+      <div class="grp"><span class="k">${T('COPY BLOCKING')}</span><select class="sel" style="width:196px" data-copyfrom="${sc.id}">
+        <option value="">${T('from another scene…')}</option>
+        ${scenes.filter(x=>x.id!==sc.id).map(x=>`<option value="${x.id}">${sceneTag(x.id)} · ${esc(x.title)}</option>`).join('')}
+        <option value="__clear">${T('Clear everyone off stage')}</option>
+      </select></div>
+      <div class="grp inline"><span class="k">${T('HOUSE')}</span>
+        <div class="segs">
+          <button class="${UI.face==='d'?'on':''}" data-face="d" title="${T('Audience at the bottom')}">↓</button>
+          <button class="${UI.face==='u'?'on':''}" data-face="u" title="${T('Audience at the top')}">↑</button>
+          <button class="${UI.mirror?'on':''}" data-mirror="1" title="${T('Mirror the floor')}">⇄</button>
+        </div>
+      </div>
+      <div class="grp inline"><span class="k">${T('AUTO-MOVE')}</span>
+        <div class="segs"><button class="${UI.auto?'on':''}" data-auto="1" title="${T('Walk the cast to their new marks when the scene changes')}">${UI.auto?T('on'):T('off')}</button></div>
+        <select class="sel" style="width:112px;font-size:11px;padding:5px 8px" data-speed="1">
+          <option value="0" ${UI.speed===0?'selected':''}>${T('slow · 2.6s')}</option>
+          <option value="1" ${UI.speed===1?'selected':''}>${T('normal')}</option>
+          <option value="2" ${UI.speed===2?'selected':''}>${T('quick')}</option>
+        </select>
+        <button class="btn sm" data-act="lineup" title="${T('Send everyone to the wings, then walk them on')}">▸ ${T('Line up')}</button>
+        <button class="btn sm" data-act="autoarrange" title="${T('Spread the cast evenly across the floor')}">${T('Spread')}</button>
+      </div>
+      <div class="spacer"></div>
+      <div class="grp"><span class="k">&nbsp;</span><span class="dim2" style="font-size:11px">${UI.mirror?T('Mirrored')+' · ':''}${UI.face==='u'?T('audience top'):T('audience bottom')}</span></div>
+    </div>
+
     <div class="scene-detail">
       <div>
         <div class="stage-frame">
-          <div class="stage-band"><span>${T('UPSTAGE · BACK WALL')}</span><span class="stage-readout" id="stage-readout">${T('free floor')}</span></div>
-          <div class="stage-canvas ${recordingHere?'recording':''}" id="stage-canvas">
+          <div class="stage-band"><span>${UI.face==='u' ? T('AUDIENCE · AROUND THE ARC') : T('UPSTAGE · BACK WALL')}${UI.mirror && UI.face!=='u' ? ' · '+T('MIRRORED') : ''}</span><span class="stage-readout" id="stage-readout">${T('free floor')}</span></div>
+          <div class="stage-canvas${UI.face==='u'?' up':''} ${recordingHere?'recording':''}" id="stage-canvas">
             <div class="path-layer-host" id="path-layer-host">${pathOverlayHTML()}</div>
             ${placed.map(tokCast).join('')}${marks.map(tokProp).join('')}
           </div>
-          <div class="stage-band">${T('AUDIENCE · AROUND THE ARC')}</div>
+          <div class="stage-band">${UI.face==='u' ? T('UPSTAGE · BACK WALL') : T('AUDIENCE · AROUND THE ARC')}${UI.mirror ? ' · '+T('MIRRORED') : ''}</div>
         </div>
-        <div class="stage-hint">${T('Plan view of the half-round floor — back wall at the top, audience around the arc. Drag a circle or a tag anywhere inside the curve; the position saves to this scene. Click a token to select it, nudge with the arrow keys (hold Shift for 5% steps), ⌘/Ctrl Z to undo. Or write a note in Movement directions and let the app walk the blocking for you.')}</div>
+        <div class="stage-hint">${T('Plan view of the half-round floor — back wall behind the cast, audience around the arc. Use HOUSE to flip the plan (audience top or bottom) or mirror it, so it matches the side of the stage you are standing on. Drag a circle or a tag anywhere inside the curve; the position saves to this scene. Click a token to select it, nudge with the arrow keys (hold Shift for 5% steps), ⌘/Ctrl Z to undo. Or write a note in Movement directions and let the app walk the blocking for you. Record a path for an actor under Movement paths; it plays in Run show.')}</div>
 
         <div class="card" style="margin-top:20px">
           <div class="sec">${T('Scene details')}</div>
@@ -1691,9 +1921,60 @@ function fmtClock(ms){
   return String(Math.floor(t/60)).padStart(2,'0') + ':' + String(t%60).padStart(2,'0');
 }
 
+function jumpRunScene(dir){
+  const list = cueList();
+  if(!list.length) return;
+  const cur = list[Math.min(UI.runIdx || 0, list.length - 1)];
+  const scenes = sceneList();
+  let si = sceneIdx(cur.scene) + dir;
+  while(si >= 0 && si < scenes.length && !list.some(c=>c.scene===scenes[si].id)) si += dir;
+  if(si < 0 || si >= scenes.length){ toast(T(dir > 0 ? 'Last scene with cues.' : 'First scene with cues.')); return; }
+  const fi = list.findIndex(c=>c.scene===scenes[si].id);
+  const fromScene = cur.scene;
+  UI.runIdx = Math.max(0, fi);
+  UI.executed = UI.executed.slice(0, UI.runIdx);
+  queueMove(fromScene, scenes[si].id);
+  render();
+}
+
+function liveFloor(sceneId, small){
+  const placed = onStage(sceneId);
+  const marks  = pmarksIn(sceneId);
+  const toks = placed.map(p=>{
+    const a = appOf(sceneId, p.cast.id);
+    const v = tf(p.x, p.y);
+    const edge = v.x < 26 ? ' edge-l' : (v.x > 74 ? ' edge-r' : '');
+    const short = p.cast.role.split('/')[0].trim();
+    return `<span class="ltok${a && a.set ? ' ok' : ''}${edge}" data-id="${p.cast.id}" style="left:${v.x}%;top:${v.y}%;--c:${p.cast.color}" title="${esc(p.cast.role)}">${initials(p.cast.name)}<span class="llbl">${esc(short)}</span></span>`;
+  }).join('');
+  const prs = marks.map(m=>{
+    const pr = propOf(m.prop); if(!pr) return '';
+    const v = tf(m.x, m.y);
+    const anchor = v.y > 88 ? 'translate(-50%,-100%)' : (v.y < 10 ? 'translate(-50%,0)' : 'translate(-50%,-50%)');
+    const nm = pr.name.length > 14 ? pr.name.slice(0,13) + '…' : pr.name;
+    return `<span class="lprop" style="left:${v.x}%;top:${v.y}%;transform:${anchor}">${esc(nm)}</span>`;
+  }).join('');
+  return `<div class="floorwrap${small?' small':''}${UI.face==='u'?' up':''}"${small?'':' id="live-main"'}>${toks}${prs}</div>`;
+}
+
+function blockingDelta(fromId, toId){
+  const a = new Set(onStage(fromId).map(p=>p.cast.id));
+  const b = new Set(onStage(toId).map(p=>p.cast.id));
+  return {
+    enters: [...b].filter(id=>!a.has(id)).map(id=>castOf(id).role),
+    exits:  [...a].filter(id=>!b.has(id)).map(id=>castOf(id).role)
+  };
+}
+
 function viewRun(){
   const list = cueList();
-  if(!list.length) return `<div class="wrap"><div class="empty">${T('No cues to call yet. Add cues in Sound & Light first.')}</div></div>`;
+  if(!list.length){
+    return `<div class="wrap"><div class="card" style="text-align:center;padding:56px 22px">
+      <div class="h2">${T('No cues yet')}</div>
+      <div class="dim" style="font-size:13px;margin:10px 0 20px">${T('The run board follows the cue list. Add SFX, LFX or prop cues first.')}</div>
+      <button class="btn primary" data-view="cues">${T('Go to Sound & Light')}</button>
+    </div></div>`;
+  }
   const idx = UI.runIdx || 0;
   if(!UI.started){ UI.started = Date.now(); saveUI(); }
 
@@ -1711,70 +1992,109 @@ function viewRun(){
     </div>`;
   }
 
-  const cue = list[idx];
+  const cue  = list[idx];
   const next = list[idx+1];
-  const sc = sceneOf(cue.scene);
-  const castHere = onStage(cue.scene);
-  const pathCount = castHere.filter(p=>{
+  const sc   = sceneOf(cue.scene);
+  const act  = S.acts.find(a=>a.id===sc.act);
+  const placed = onStage(cue.scene);
+  const wings  = offStage(cue.scene);
+  const checked = placed.filter(p=>{ const a = appOf(cue.scene, p.cast.id); return a && a.set; }).length;
+  const nScene = sceneList()[sceneIdx(cue.scene) + 1];
+  const delta = nScene ? blockingDelta(cue.scene, nScene.id) : null;
+  const done = UI.executed.slice().reverse().slice(0,5);
+  const pathCount = placed.filter(p=>{
     const a = appOf(cue.scene, p.cast.id);
     return a && Array.isArray(a.path) && a.path.length;
   }).length;
-  const done = UI.executed.slice().reverse();
-  const pct = Math.round((idx/list.length)*100);
 
-  return `<div class="wrap" style="max-width:1080px">
-    <div class="run-stage-card">
-      <div class="run-stage-head">
-        <div><div class="sec" style="margin:0">${T('Stage · {tag}', {tag:sceneTag(cue.scene)})}</div></div>
-        <button class="btn sm ghost" data-act="replaypaths" ${pathCount ? '' : 'disabled'}>${T('Replay movement')}</button>
+  return `<div class="wrap live">
+    <div class="livehead">
+      <div>
+        <div class="tag">${T('Scene {tag} · {act}', {tag:sceneTag(cue.scene), act:esc(act ? act.name : '')})}</div>
+        <h2>${esc(sc.title)}</h2>
+        <div class="sub">${T('{on} on stage · {wings} in the wings · {cues} in this scene', {on:placed.length, wings:wings.length, cues:pl(cuesIn(cue.scene).length,'cue')})}</div>
       </div>
-      <div class="run-stage-canvas" id="run-stage-canvas">${castHere.map(tokRun).join('')}</div>
-      <div class="run-stage-note">${pathCount ? (pathCount === 1 ? T('One actor follows a recorded path.') : T('{n} actors follow a recorded path.', {n:pathCount})) : T('No recorded paths in this scene.')}</div>
+      <div style="display:flex;gap:26px;align-items:flex-end">
+        <div class="liveclock"><div class="k">${T('CUE')}</div><div class="v">${cueLabel(cue)}</div></div>
+        <div class="liveclock"><div class="k">${idx+1} / ${list.length}</div><div class="v" id="run-elapsed">${fmtClock(Date.now()-UI.started)}</div></div>
+        <div class="segs" style="align-self:flex-end;margin-bottom:2px">
+          <button class="${UI.face==='d'?'on':''}" data-face="d" title="${T('Audience at the bottom')}">↓</button>
+          <button class="${UI.face==='u'?'on':''}" data-face="u" title="${T('Audience at the top')}">↑</button>
+          <button class="${UI.mirror?'on':''}" data-mirror="1" title="${T('Mirror the floor')}">⇄</button>
+        </div>
+      </div>
     </div>
-    <div class="runwrap">
-      <div class="gostage">
-        <div class="now">${T('SCENE {tag} · {title} · {dur}', {tag:sceneTag(cue.scene), title:esc(sc.title).toUpperCase(), dur:esc(sc.duration||'')})}</div>
-        <div class="cuebig">${cueLabel(cue)}</div>
-        <div style="display:flex;gap:10px;align-items:center;margin-bottom:14px">
-          <span class="badge ${TYPES[cue.type].cls}">${T(TYPES[cue.type].label)}</span>
-          <span class="dim2" style="font-size:11px">${T('cue {i} of {n}', {i:String(idx+1).padStart(2,'0'), n:list.length})}</span>
+
+    <div class="livegrid">
+      <div class="card floorcard">
+        <div class="sec" style="display:flex;justify-content:space-between;align-items:center;gap:10px">
+          <span>${T('Now on stage · {checked}/{total} checked', {checked:checked, total:placed.length})}</span>
+          <span style="display:flex;gap:6px;align-items:center;flex:0 0 auto">
+            ${pathCount ? `<button class="sp-btn" data-act="replaypaths">${T('Replay movement')}</button>` : ''}
+            <button class="sp-btn" data-clearset="${cue.scene}">${T('Clear checks')}</button>
+          </span>
         </div>
-        <div class="cuedesc">${esc(cue.desc)}</div>
-        ${cue.note?`<div class="dim" style="font-size:12px;margin-top:10px;line-height:1.5">${esc(cue.note)}</div>`:''}
-        <div class="timer">
-          <div><div class="k">${T('Trigger')}</div><div class="v" style="font-size:14px">${T(cue.trig)}</div></div>
-          <div><div class="k">${T('Length')}</div><div class="v">${esc(cue.dur||'—')}</div></div>
-          <div><div class="k">${T('Elapsed')}</div><div class="v" id="run-elapsed">${fmtClock(Date.now()-UI.started)}</div></div>
+        ${pathCount ? `<div class="nextline" style="margin-top:2px"><span class="k">${T('PATHS')}</span><span>${pathCount === 1 ? T('One actor follows a recorded path.') : T('{n} actors follow a recorded path.', {n:pathCount})}</span></div>` : ''}
+        ${liveFloor(cue.scene)}
+        <div class="setrow">
+          ${placed.map(p=>{
+            const a = appOf(cue.scene, p.cast.id);
+            return `<button class="chipbtn${a && a.set ? ' ok':''}" style="--c:${p.cast.color}" data-setactor="${p.cast.id}" data-setscene="${cue.scene}"><i></i>${esc(p.cast.role)}${a && a.set ? '<span class="tick">✓</span>' : ''}</button>`;
+          }).join('') || `<span class="dim2" style="font-size:11.5px">${T('nobody placed on this floor')}</span>`}
         </div>
-        <div class="prog"><i style="width:${pct}%"></i></div>
-        <button class="gobtn" data-act="go">GO${next?' <span style="font-size:11px;font-weight:500;letter-spacing:.04em;opacity:.7">'+T('→ next {label}', {label:cueLabel(next)})+'</span>':''}</button>
-        <div style="display:flex;gap:10px;margin-top:10px">
-          <button class="gobtn next" style="flex:1" data-act="back">↩ ${T('Back one cue')}</button>
-          <button class="gobtn next" style="flex:1" data-view="cuebook">${T('Leave the run')}</button>
-        </div>
-        <div class="dim2" style="text-align:center;font-size:10.5px;margin-top:12px;letter-spacing:.08em">${T('SPACE = GO · ESC = LEAVE THE RUN')}</div>
+        ${wings.length?`<div class="nextline"><span class="k">${T('WINGS')}</span><span>${wings.map(c=>esc(c.role)).join(', ')}</span></div>`:''}
       </div>
 
-      <div class="runside">
+      <div style="display:flex;flex-direction:column;gap:16px;min-width:0">
         <div class="card">
-          <div class="sec">${T('Standing by')}</div>
-          ${next?`<div class="upnext"><div class="k">${cueLabel(next)} · ${T(TYPES[next.type].label).toUpperCase()}</div><div class="d">${esc(next.desc)}</div>
-            <div class="dim2" style="font-size:10.5px;margin-top:4px">${T(next.trig)} · ${T('scene {tag}', {tag:sceneTag(next.scene)})}</div></div>
-          <div class="dim2" style="font-size:11px;margin-top:8px">${T('{n} to go', {n:pl(list.length-idx-1,'cue')})}</div>`
-          :`<div class="dim" style="font-size:12.5px">${T('This is the last cue of the show.')}</div>`}
+          <div class="sec">${T('Standby')}${next?' · '+cueLabel(next):''}</div>
+          ${next?`<div class="badge ${TYPES[next.type].cls}" style="margin-bottom:8px">${T(TYPES[next.type].label).toUpperCase()}</div>
+            <div style="font-size:15px;line-height:1.45;margin:6px 0 8px">${esc(next.desc)}</div>
+            <div class="dim2" style="font-size:11px">${T(next.trig)} · ${esc(next.dur||'—')} · ${T('scene {tag}', {tag:sceneTag(next.scene)})}</div>
+            <div class="dim2" style="font-size:11px;margin-top:8px">${T('{n} after this one', {n:pl(list.length-idx-1,'cue')})}</div>`
+            :`<div class="dim" style="font-size:13px">${T('Last cue of the show. Stand by for the call.')}</div>`}
+          ${(()=>{const then=list.slice(idx+2, idx+5); return then.length?`<div style="margin-top:14px;border-top:1px solid var(--line);padding-top:11px">
+            <div style="font:9px/1 var(--mono);letter-spacing:.16em;color:var(--dim2);margin-bottom:7px">${T('THEN')}</div>
+            ${then.map(c=>`<div style="display:flex;gap:8px;align-items:baseline;font-size:11.5px;line-height:1.55">
+              <span class="mono" style="flex:0 0 42px;color:var(--dim2);font-size:10px">${cueLabel(c)}</span>
+              <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(c.desc)}</span></div>`).join('')}
+          </div>`:'';})()}
         </div>
+
         <div class="card">
-          <div class="sec">${T('On stage · {tag}', {tag:sceneTag(cue.scene)})}</div>
-          <div class="pillrow">${castHere.map(p=>`<span class="chip"><i style="width:6px;height:6px;border-radius:2px;background:${p.cast.color}"></i>${esc(p.cast.role)}</span>`).join('') || `<span class="dim2" style="font-size:11px">${T('nobody placed')}</span>`}</div>
+          <div class="sec">${T('Now cueing')}</div>
+          <div class="badge ${TYPES[cue.type].cls}">${T(TYPES[cue.type].label).toUpperCase()}</div>
+          <div style="font-size:15px;line-height:1.45;margin:8px 0 6px">${esc(cue.desc)}</div>
+          <div class="dim2" style="font-size:11px">${T(cue.trig)} · ${esc(cue.dur||'—')}</div>
+          ${cue.note?`<div class="dim" style="font-size:11.5px;margin-top:8px;line-height:1.5">${esc(cue.note)}</div>`:''}
         </div>
+
+        ${nScene?`<div class="card">
+          <div class="sec">${T('Next scene · {tag} {title}', {tag:sceneTag(nScene.id), title:esc(nScene.title)})}</div>
+          <div class="nextline"><span class="k">${T('ENTERS')}</span><span>${delta.enters.length?esc(delta.enters.join(', ')):'—'}</span></div>
+          <div class="nextline"><span class="k">${T('EXITS')}</span><span>${delta.exits.length?esc(delta.exits.join(', ')):'—'}</span></div>
+          ${liveFloor(nScene.id, true)}
+        </div>`:''}
+
         <div class="card">
           <div class="sec">${T('Called · {n}', {n:UI.executed.length})}</div>
-          ${done.length?`<div class="done-list">${done.map(id=>{
+          ${done.length?`<div class="called-mini">${done.map(id=>{
             const c = S.cues.find(x=>x.id===id); if(!c) return '';
-            return `<div class="done-item"><span class="no">${cueLabel(c)}</span><span style="flex:1">${esc(c.desc).slice(0,46)}</span></div>`;
+            return `<div class="done-item"><span class="no">${cueLabel(c)}</span><span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(c.desc)}</span></div>`;
           }).join('')}</div>`:`<div class="dim2" style="font-size:11.5px">${T('Nothing called yet.')}</div>`}
         </div>
       </div>
+    </div>
+
+    <div class="livefoot">
+      <button class="gobtn" data-act="go">GO${next?' <span style="font-size:11px;font-weight:500;letter-spacing:.04em;opacity:.72">→ '+cueLabel(next)+'</span>':''}</button>
+      <div class="livbar">
+        <button class="btn" data-act="runprev">◀ ${T('Previous scene')}</button>
+        <button class="btn" data-act="back">↩ ${T('Back one cue')}</button>
+        <button class="btn" data-act="runnext">${T('Next scene')} ▶</button>
+        <button class="btn ghost" data-view="cuebook">${T('Leave the run')}</button>
+      </div>
+      <div class="dim2" style="text-align:center;font-size:10px;margin-top:10px;letter-spacing:.08em">${T('SPACE = GO · ESC = LEAVE · TAP A NAME TO CHECK IT OFF')}</div>
     </div>
   </div>`;
 }
@@ -1801,15 +2121,16 @@ function resetRunMotion(){
   clearRunAnimation();
   runScene = null;
 }
+function liveTokenEl(id){ return document.querySelector('#live-main .ltok[data-id="' + id + '"]'); }
 function setRunPosition(id, p){
   runPositions[id] = {x:p.x, y:p.y};
-  const el = document.querySelector('[data-run-id="' + id + '"]');
-  if(el){ el.style.left = p.x + '%'; el.style.top = p.y + '%'; }
+  const el = liveTokenEl(id);
+  if(el){ const v = tf(p.x, p.y); el.style.left = v.x + '%'; el.style.top = v.y + '%'; }
 }
 function applyRunPositions(){
   Object.keys(runPositions).forEach(id=>{
-    const el = document.querySelector('[data-run-id="' + id + '"]');
-    if(el){ el.style.left = runPositions[id].x + '%'; el.style.top = runPositions[id].y + '%'; }
+    const el = liveTokenEl(id);
+    if(el){ const p = runPositions[id], v = tf(p.x, p.y); el.style.left = v.x + '%'; el.style.top = v.y + '%'; }
   });
 }
 function countRunPaths(scene){
@@ -1948,7 +2269,9 @@ function addPathPoint(clientX, clientY, canvas){
   if(pathMode.points.length >= 30){ toast(T('A path can have up to 30 points.')); return; }
   const r = canvas.getBoundingClientRect();
   if(!r.width || !r.height) return;
-  const p = clampDisc(((clientX - r.left) / r.width) * 100, ((clientY - r.top) / r.height) * 100);
+  const screen = {x:((clientX - r.left) / r.width) * 100, y:((clientY - r.top) / r.height) * 100};
+  const logical = tfBack(screen.x, screen.y);
+  const p = clampDisc(logical.x, logical.y);
   pathMode.points.push({x:Math.round(p.x*100)/100, y:Math.round(p.y*100)/100});
   render();
 }
@@ -2129,18 +2452,22 @@ function startRun(fromIdx){
 function goNext(){
   const list = cueList();
   if((UI.runIdx||0) >= list.length) return;
+  const fromScene = list[UI.runIdx].scene;
   UI.executed.push(list[UI.runIdx].id);
   UI.runIdx++;
   saveUI();
+  queueMove(fromScene, list[UI.runIdx] ? list[UI.runIdx].scene : null);
   render();
 }
 
 function goBack(){
   const list = cueList();
   if(!UI.runIdx) return;
+  const fromScene = list[UI.runIdx].scene;
   UI.runIdx--;
   UI.executed = UI.executed.slice(0, UI.runIdx);
   saveUI();
+  queueMove(fromScene, list[UI.runIdx] ? list[UI.runIdx].scene : null);
   render();
 }
 
@@ -2165,7 +2492,7 @@ function filterPropRows(){
    12. EVENT WIRING
    ================================================================== */
 document.addEventListener('click', e=>{
-  const el = e.target.closest('[data-view],[data-act],[data-lang],[data-addact],[data-addscene],[data-delscene],[data-renameact],[data-place],[data-send],[data-delcast],[data-delprop],[data-delcue],[data-rmprop],[data-rmpropscene],[data-jump],[data-path-start],[data-path-edit],[data-path-save],[data-path-cancel],[data-path-undo],[data-path-clear],[data-path-preview]');
+  const el = e.target.closest('[data-view],[data-act],[data-lang],[data-face],[data-mirror],[data-auto],[data-setactor],[data-clearset],[data-addact],[data-addscene],[data-delscene],[data-renameact],[data-place],[data-send],[data-delcast],[data-delprop],[data-delcue],[data-rmprop],[data-rmpropscene],[data-jump],[data-path-start],[data-path-edit],[data-path-save],[data-path-cancel],[data-path-undo],[data-path-clear],[data-path-preview]');
   if(!el) return;
 
   if(el.dataset.lang){ setLanguage(el.dataset.lang); return; }
@@ -2187,11 +2514,43 @@ document.addEventListener('click', e=>{
     else if(act==='addcue') addCue();
     else if(act==='startrun') startRun(0);
     else if(act==='autoarrange') autoArrange();
+    else if(act==='lineup') lineUp();
     else if(act==='runmove') runDirections();
     else if(act==='undorun') undoRun();
+    else if(act==='runprev') jumpRunScene(-1);
+    else if(act==='runnext') jumpRunScene(1);
     else if(act==='go') goNext();
     else if(act==='back') goBack();
     else if(act==='replaypaths') replayRunPaths();
+    return;
+  }
+
+  if(el.dataset.face){
+    UI.face = el.dataset.face === 'u' ? 'u' : 'd';
+    persistUI(); render();
+    return;
+  }
+  if(el.dataset.mirror){
+    UI.mirror = !UI.mirror;
+    persistUI(); render();
+    return;
+  }
+  if(el.dataset.auto){
+    UI.auto = !UI.auto;
+    persistUI(); render();
+    toast(T(UI.auto ? 'Auto-move on — the cast walks to their marks.' : 'Auto-move off.'));
+    return;
+  }
+  if(el.dataset.setactor){
+    const sceneId = el.dataset.setscene || UI.scene;
+    const a = appOf(sceneId, el.dataset.setactor);
+    if(a){ a.set = !a.set; save(); render(); }
+    return;
+  }
+  if(el.dataset.clearset){
+    const sceneId = el.dataset.clearset;
+    S.apps.forEach(a=>{ if(a.scene===sceneId) a.set = false; });
+    save(); render();
     return;
   }
 
@@ -2288,6 +2647,12 @@ document.addEventListener('input', e=>{
 
 document.addEventListener('change', e=>{
   const el = e.target;
+
+  if(el.dataset.speed){
+    UI.speed = Number(el.value) || 0;
+    persistUI(); render();
+    return;
+  }
 
   if(el.id==='file'){
     const file = el.files && el.files[0];
@@ -2432,7 +2797,7 @@ function applySelection(){
 
 function syncToken(kind, id, x, y){
   const el = document.querySelector('[data-kind="' + kind + '"][data-id="' + id + '"]');
-  if(el){ el.style.left = x + '%'; el.style.top = y + '%'; }
+  if(el){ const v = tf(x, y); el.style.left = v.x + '%'; el.style.top = v.y + '%'; }
 }
 
 let lastMoveAt = 0;
@@ -2514,13 +2879,16 @@ document.addEventListener('pointerdown', e=>{
 document.addEventListener('pointermove', e=>{
   if(!tokDrag) return;
   const r = tokDrag.r;
-  const raw = clampDisc(((e.clientX - tokDrag.offX - r.left) / r.width) * 100,
-                        ((e.clientY - tokDrag.offY - r.top) / r.height) * 100);
+  const vx = ((e.clientX - tokDrag.offX - r.left) / r.width) * 100;
+  const vy = ((e.clientY - tokDrag.offY - r.top) / r.height) * 100;
+  const dz = tfBack(vx, vy);
+  const raw = clampDisc(dz.x, dz.y);
   const x = raw.x, y = raw.y;
   if(Math.abs(e.clientX - tokDrag.sx) > 3 || Math.abs(e.clientY - tokDrag.sy) > 3) tokDrag.moved = true;
   tokDrag.x = x; tokDrag.y = y;
-  tokDrag.el.style.left = x + '%';
-  tokDrag.el.style.top  = y + '%';
+  const vp = tf(x, y);
+  tokDrag.el.style.left = vp.x + '%';
+  tokDrag.el.style.top  = vp.y + '%';
   updateReadout(x, y);
 });
 
@@ -2655,10 +3023,11 @@ function stepTarget(a, st){
 function animateToken(kind, id, x, y, ms, op){
   const el = tokenEl(kind, id);
   if(!el) return;
+  const v = tf(x, y);
   el.style.transition = 'left ' + ms + 'ms cubic-bezier(.33,.02,.24,1), top ' + ms + 'ms cubic-bezier(.33,.02,.24,1)'
                       + (op != null ? ', opacity .45s linear' : '');
-  el.style.left = x + '%';
-  el.style.top  = y + '%';
+  el.style.left = v.x + '%';
+  el.style.top  = v.y + '%';
   if(op != null) el.style.opacity = String(op);
 }
 
@@ -2809,7 +3178,7 @@ document.addEventListener('keydown', e=>{
 
 document.addEventListener('keydown', e=>{
   if(UI.view!=='run' || e.repeat) return;
-  if(e.code==='Space'){ e.preventDefault(); goNext(); }
+  if(e.code==='Space' && !(document.activeElement && document.activeElement.tagName==='BUTTON')){ e.preventDefault(); goNext(); }
   if(e.key==='Escape'){ go('cuebook'); }
 });
 
