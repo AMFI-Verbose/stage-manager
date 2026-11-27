@@ -2046,7 +2046,7 @@ document.addEventListener('keydown', e=>{
 
 document.addEventListener('keydown', e=>{
   if(UI.view!=='run') return;
-  if(e.code==='Space'){ e.preventDefault(); goNext(); }
+  if(e.code==='Space' && !(document.activeElement && document.activeElement.tagName==='BUTTON')){ e.preventDefault(); goNext(); }
   if(e.key==='Escape'){ go('cuebook'); }
 });
 
