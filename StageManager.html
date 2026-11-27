@@ -202,7 +202,7 @@ nav#nav{display:flex;flex-direction:column;gap:3px}
 .livegrid{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);gap:18px;align-items:start}
 @media (max-width:1040px){.livegrid{grid-template-columns:minmax(0,1fr)}}
 .floorcard{padding:18px 18px 16px}
-.floorwrap{position:relative;height:clamp(220px,30vh,320px);border-radius:0 0 50% 50% / 0 0 100% 100%;overflow:hidden;
+.floorwrap{position:relative;height:clamp(220px,30vh,320px);border-radius:0 0 50% 50% / 0 0 100% 100%;
   background:radial-gradient(ellipse 96% 192% at 50% 0%,#fffefb,#f6f2ea);box-shadow:inset 0 0 0 1px #e3dcd0}
 .floorwrap.small{height:clamp(120px,15vh,150px);margin-top:10px}
 .ltok{position:absolute;transform:translate(-50%,-50%);width:48px;height:48px;border-radius:50%;background:#fff;border:2px solid var(--c,#888);
@@ -1203,8 +1203,9 @@ function liveFloor(sceneId, small){
   const marks  = pmarksIn(sceneId);
   const toks = placed.map(p=>{
     const a = appOf(sceneId, p.cast.id);
-    const edge = p.x < 22 ? ' edge-l' : (p.x > 78 ? ' edge-r' : '');
-    return `<span class="ltok${a && a.set ? ' ok' : ''}${edge}" style="left:${p.x}%;top:${p.y}%;--c:${p.cast.color}" title="${esc(p.cast.role)}">${initials(p.cast.name)}<span class="llbl">${esc(p.cast.role)}</span></span>`;
+    const edge = p.x < 26 ? ' edge-l' : (p.x > 74 ? ' edge-r' : '');
+    const short = p.cast.role.split('/')[0].trim();
+    return `<span class="ltok${a && a.set ? ' ok' : ''}${edge}" style="left:${p.x}%;top:${p.y}%;--c:${p.cast.color}" title="${esc(p.cast.role)}">${initials(p.cast.name)}<span class="llbl">${esc(short)}</span></span>`;
   }).join('');
   const prs = marks.map(m=>{
     const pr = propOf(m.prop); if(!pr) return '';
