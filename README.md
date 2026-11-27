@@ -21,7 +21,9 @@ right now?" sits in one view:
 - **Next scene** — the oncoming scene's floor plan plus explicit **ENTERS / EXITS** lists,
   so you can catch the changeover before it happens.
 - **Called** — the last five cues, as a record.
-- **GO** — sticky at the bottom of the screen. `Space` = GO, `Esc` = leave the run.
+- **GO** — sticky at the bottom of the screen, and each GO walks the floor to the next scene's
+  blocking before your eyes (see **Moving people**). `Space` = GO, `Esc` = leave the run.
+  The `↓ ↑ ⇄` buttons next to the clock turn the floor round, same as in the plan.
   `◀ Previous scene` / `Next scene ▶` jump to the neighbouring scene that has cues,
   `↩ Back one cue` steps back a single cue.
 
@@ -43,6 +45,12 @@ missing props or unassigned cues.
 audience. Actors are coloured discs, props are tags preset along the back wall. Drag either
 one and the position saves to that scene.
 
+The **HOUSE** buttons turn the whole floor round without touching a single blocking mark:
+`↓` puts the audience at the bottom of the screen, `↑` at the top, `⇄` mirrors stage left and
+right. Use them when you are standing on the opposite side of the room, working from the
+audience's point of view, or reading a plan drawn the other way up. The setting is remembered,
+and it applies to the run board too.
+
 **Cast & doubling** — enter/exit counts per character, doubling notes per track.
 
 **Props** — quantity, status (Ready / In use / Needs work / Missing / Struck), location, and the
@@ -54,8 +62,18 @@ scenes that call them.
 
 ## Moving people
 
-Drag a token, or click one and nudge it with the arrow keys (hold Shift for 5% steps).
-⌘/Ctrl Z undoes the last move, Delete sends the selected actor to the wings.
+The cast moves itself. **Auto-move** is on by default: change scene in the plan, or press **GO**
+in the run, and every actor already marked on the floor walks from where they stood to their new
+mark — staggered, so you can see the changeover resolve. Anyone who was not in the previous
+scene slides in from the wing nearest their mark. Speed is `slow / normal / quick` (2.6 s → 0.85 s).
+
+Turn it off if you only want the marks to snap. `▸ Line up` runs the same animation from the
+wings on demand — everyone goes out, then walks on — which is the quickest way to show a
+designer what a scene looks like as it assembles.
+
+You can also move people by hand. Drag a token, or click one and nudge it with the arrow keys
+(hold Shift for 5% steps). ⌘/Ctrl Z undoes the last move, Delete sends the selected actor to
+the wings.
 
 Better still, type the blocking into **Movement directions** and press **Run moves**
 (⌘/Ctrl ↵ also works):
