@@ -1,7 +1,8 @@
 # Stage Manager
 
 A single-file rehearsal and cue book for stage managers — prop tracking, a half-round virtual
-stage with draggable blocking, and typed movement directions that the page animates itself.
+stage with draggable blocking, recorded movement paths that play during the run, and typed movement
+directions that the page animates itself.
 
 Open `StageManager.html` in any modern browser. No build step, no server, no dependencies.
 
@@ -25,8 +26,9 @@ scenes that call them.
 
 **Cue sheet** — a printable running order; cue numbers are generated per type (SQ / LX / PQ).
 
-**Run show** — the big GO button, running clock, and the executed cue list. The cue position
-and called list survive a refresh.
+**Run show** — the big GO button, running clock, and the executed cue list. A stage plan above the
+cues shows the cast; when a scene with recorded paths starts, the actors glide along those paths.
+**Replay movement** runs the current scene again. The cue position and called list survive a refresh.
 
 **Settings** — switch the interface between English (the default) and Simplified Chinese. The
 choice is saved in this browser; the show, the demo and imported files keep their original text.
@@ -56,6 +58,19 @@ same track. Places are `upstage / centre / downstage` × `left / right`, plus `e
 
 Chinese directions use the same parser: `Gerda 走到左前`, `Kay 退场`, `所有人回位`. Position
 words are `前 / 中 / 后` × `左 / 右`, plus `上场`, `退场` and `回位`.
+
+## Movement paths
+
+Select an actor on the Scenes & stage floor, then use **Movement paths**:
+
+1. **Record path** (or **Edit path** if one exists)
+2. click points on the floor in the order you want the actor to walk
+3. **Save path**
+
+The path starts from the actor's current mark. It is stored per scene and actor (up to 30 points),
+travels with Export / Import, and **Clear path** removes it. **Preview path** plays it in the stage
+editor. In **Run show**, a path plays when its scene begins; GO within the same scene does not restart
+it, and **Replay movement** plays the current scene again. **Copy blocking from…** copies paths too.
 
 ## The demo show
 

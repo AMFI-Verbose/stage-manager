@@ -187,6 +187,14 @@ nav#nav{display:flex;flex-direction:column;gap:3px}
 .dirline{display:flex;gap:6px;font:11px/1.45 var(--sans);color:var(--dim);align-items:baseline}
 .dirline .mk{flex:0 0 10px;color:var(--accent)}
 .dirline b{color:var(--ink);font-weight:600}
+.path-layer-host{position:absolute;inset:0;pointer-events:none;z-index:0}
+.path-layer{width:100%;height:100%;display:block;overflow:visible}
+.path-line{fill:none;stroke:var(--accent);stroke-width:1.4;stroke-dasharray:4 3;opacity:.6;stroke-linejoin:round;stroke-linecap:round}
+.path-line.recording{stroke-dasharray:2 2;opacity:.95}
+.path-dot{fill:#fff;stroke:var(--accent);stroke-width:1.2;opacity:.85}
+.path-dot.recording{fill:var(--accent);stroke:#fff}
+.path-num{position:absolute;transform:translate(-50%,-50%);min-width:16px;height:16px;padding:0 4px;border-radius:9px;background:var(--accent);color:#fff;font:9px/16px var(--mono);text-align:center;box-shadow:0 1px 3px rgba(0,0,0,.2);pointer-events:none}
+.stage-canvas.recording{box-shadow:0 0 0 2px rgba(163,58,49,.55), 0 26px 48px -38px rgba(60,44,30,.5), inset 0 3px 0 rgba(255,255,255,.95)}
 /* side panel rows */
 .sp-row{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #f1eee7}
 .sp-row:last-child{border-bottom:0}
@@ -204,6 +212,17 @@ nav#nav{display:flex;flex-direction:column;gap:3px}
 .cue-mini .tx{flex:1;line-height:1.5}
 
 /* ---------- run ---------- */
+.run-stage-card{border:1px solid var(--line);border-radius:18px;background:var(--paper);padding:14px 16px 12px;margin-bottom:16px;box-shadow:var(--shadow)}
+.run-stage-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:10px}
+.run-stage-canvas{position:relative;height:clamp(180px,24vh,260px);overflow:hidden;
+  border-radius:0 0 50% 50% / 0 0 100% 100%;
+  background:
+    linear-gradient(90deg,transparent 49.7%,rgba(0,0,0,.045) 49.85%,rgba(0,0,0,.045) 50.15%,transparent 50.3%),
+    radial-gradient(ellipse 96% 192% at 50% 0%, #fffefb 0%, #fbf8f1 62%, #f4f0e8 100%);
+  box-shadow:0 0 0 1px #d8d1c4, inset 0 3px 0 rgba(255,255,255,.95)}
+.run-stage-canvas .actor-token{width:46px;height:46px;font-size:11px;border-width:2px;cursor:default;pointer-events:none}
+.run-stage-canvas .actor-token .lbl{display:none}
+.run-stage-note{font-size:11px;color:var(--dim2);margin-top:9px;text-align:center;letter-spacing:.02em}
 .runwrap{display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:20px;align-items:start}
 .runside{min-width:0;display:flex;flex-direction:column;gap:16px}
 .gostage{border:1px solid var(--line);border-radius:18px;background:var(--paper);padding:34px;position:relative;overflow:hidden;box-shadow:var(--shadow)}
@@ -524,6 +543,12 @@ function normalise(){
   /* older saves may sit outside the half-round floor — pull them back inside */
   S.apps.forEach(a=>{ if(a.x != null && a.y != null){ const p = clampDisc(a.x, a.y); a.x = p.x; a.y = p.y; } });
   S.pmarks.forEach(m=>{ const p = clampDisc(m.x, m.y); m.x = p.x; m.y = p.y; });
+  S.apps.forEach(a=>{
+    if(a.path != null){
+      a.path = cleanPath(a.path);
+      if(!a.path.length) delete a.path;
+    }
+  });
 }
 
 /* the floor is a half-disc: widest at the back wall, tapering to the apron tip */
@@ -533,6 +558,19 @@ function clampDisc(x, y){
   y = Math.max(6, Math.min(88, y));
   const sp = discSpan(y);
   return {x: Math.max(50 - sp, Math.min(50 + sp, x)), y};
+}
+/* paths are ordered points on the floor; keep them finite and inside the curve */
+function cleanPath(path){
+  if(!Array.isArray(path)) return [];
+  return path.slice(0, 30).filter(p=>p && p.x != null && p.y != null && Number.isFinite(Number(p.x)) && Number.isFinite(Number(p.y)))
+    .map(p=>{
+      const q = clampDisc(Number(p.x), Number(p.y));
+      return {x:Math.round(q.x*100)/100, y:Math.round(q.y*100)/100};
+    });
+}
+function pathOf(scene, castId){
+  const a = appOf(scene, castId);
+  return a && Array.isArray(a.path) ? a.path : [];
 }
 
 function layoutScene(scene){
@@ -619,6 +657,12 @@ function normaliseShow(s){
   if(s.cues.some(c=>!c || typeof c.id !== 'string' || typeof c.desc !== 'string' || !TYPES[c.type] || !s.scenes.some(sc=>sc.id===c.scene))) return null;
   s.apps = s.apps.filter(a=>a && typeof a === 'object');
   s.pmarks = s.pmarks.filter(m=>m && typeof m === 'object');
+  s.apps.forEach(a=>{
+    if(a.path != null){
+      a.path = cleanPath(a.path);
+      if(!a.path.length) delete a.path;
+    }
+  });
   return s;
 }
 
@@ -666,7 +710,7 @@ function pl(n, w){
   if(UI.lang === 'zh'){
     const measure = {person:'人', actor:'位演员', track:'条角色线', prop:'个道具', cue:'条提示',
                      move:'次移动', delete:'次删除', scene:'个场景', act:'幕', item:'项',
-                     entrance:'次入场', call:'条提示'}[w];
+                     entrance:'次入场', call:'条提示', point:'个点'}[w];
     return n + ' ' + (measure || w);
   }
   return n + ' ' + w + (n === 1 ? '' : 's');
@@ -929,6 +973,35 @@ const ZH = {
   'Standby / trigger': '待命 / 触发',
   'No cues yet — add some in Sound & Light.': '还没有提示——先去“声光”里添加。',
   'Call from this cue': '从这条提示开始',
+  /* movement paths */
+  'Movement paths': '移动轨迹',
+  'Select an actor on the floor to record a path.': '在舞台上选择一个演员来录制轨迹。',
+  'Recording path for {role}. Click the floor to add points.': '正在为 {role} 录制轨迹。点击舞台添加路径点。',
+  'Click the floor to add path points': '点击舞台添加路径点',
+  'Undo point': '撤销上一个点',
+  'Save path': '保存轨迹',
+  'Cancel': '取消',
+  'Path saved — {n}.': '轨迹已保存——{n}。',
+  'Path cleared.': '轨迹已清除。',
+  'Path changes discarded.': '轨迹修改已放弃。',
+  'No path recorded for this actor.': '这个演员还没有轨迹。',
+  '{n} recorded · the path starts from the actor’s current mark.': '已记录 {n}，轨迹从演员当前位置开始。',
+  'Place the actor on stage first.': '请先把演员放到台上。',
+  'Record path': '录制轨迹',
+  'Edit path': '编辑轨迹',
+  'Preview path': '预览轨迹',
+  'Clear path': '清除轨迹',
+  'Click points on the floor to record a path.': '在舞台上点击，记录移动轨迹。',
+  'Previewing the path.': '正在预览轨迹。',
+  'A path can have up to 30 points.': '一条轨迹最多 30 个点。',
+  'Select an actor first.': '请先选择一个演员。',
+  'Recording path — click the floor to add points.': '正在录制轨迹——点击舞台添加路径点。',
+  'Editing path — click the floor to add points.': '正在编辑轨迹——点击舞台添加路径点。',
+  'Stage · {tag}': '舞台 · {tag}',
+  'Replay movement': '重播移动',
+  'One actor follows a recorded path.': '1 位演员沿已录制轨迹移动。',
+  '{n} actors follow a recorded path.': '{n} 位演员沿已录制轨迹移动。',
+  'No recorded paths in this scene.': '本场景还没有录制轨迹。',
   /* run */
   'No cues to call yet. Add cues in Sound & Light first.': '还没有可执行的提示。请先在“声光”里添加。',
   'CURTAIN DOWN': '落幕',
@@ -1043,6 +1116,7 @@ function saveUI(){
 }
 
 function go(view, scene){
+  if(pathMode && (view !== 'stage' || (scene && scene !== pathMode.scene))) pathMode = null;
   UI.view = view;
   try{ selected = (view === 'stage' && !scene) ? selected : null; }catch(err){}
   if(scene) UI.scene = scene;
@@ -1073,6 +1147,9 @@ function render(){
   v.innerHTML = (views[UI.view] || viewOverview)();
   if(UI.view === 'stage'){
     try{ applySelection(); updateReadout(null); }catch(err){}
+  }
+  if(UI.view === 'run'){
+    try{ syncRunMotion(); }catch(err){}
   }
 }
 /* ==================================================================
@@ -1193,6 +1270,74 @@ function tokProp(m){
   return `<span class="prop-token" data-kind="prop" data-id="${pr.id}" style="left:${m.x}%;top:${m.y}%" title="${esc(pr.name)} · x${pr.qty} · ${esc(pr.loc||'')}"><span class="sq"></span><span>${esc(nm)}</span></span>`;
 }
 
+function tokRun(p){
+  const c = p.cast;
+  return `<span class="actor-token run-token" data-run-id="${c.id}" style="left:${p.x}%;top:${p.y}%;--c:${c.color}" title="${esc(c.role)} — ${esc(c.name)}">${initials(c.name)}<span class="lbl">${esc(c.role)}</span></span>`;
+}
+
+/* ---------- recorded movement paths ---------- */
+function pathOverlayHTML(){
+  if(!selected || selected.kind !== 'cast') return '';
+  const a = appOf(UI.scene, selected.id);
+  if(!a) return '';
+  const rec = !!(pathMode && pathMode.scene === UI.scene && pathMode.cast === selected.id);
+  const pts = rec ? pathMode.points : (Array.isArray(a.path) ? a.path : []);
+  if(!pts.length) return '';
+  const start = a.on ? {x:a.x, y:a.y} : null;
+  const all = start ? [start].concat(pts) : pts;
+  const line = all.map(p=>Number(p.x).toFixed(2) + ',' + Number(p.y).toFixed(2)).join(' ');
+  const dots = pts.map(p=>`<circle class="path-dot${rec?' recording':''}" cx="${Number(p.x).toFixed(2)}" cy="${Number(p.y).toFixed(2)}" r="${rec?1.5:1.1}" vector-effect="non-scaling-stroke"></circle>`).join('');
+  const nums = rec ? pts.map((p,i)=>`<span class="path-num" style="left:${p.x}%;top:${p.y}%">${i+1}</span>`).join('') : '';
+  return `<svg class="path-layer" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+    <polyline class="path-line${rec?' recording':''}" points="${line}" vector-effect="non-scaling-stroke"></polyline>${dots}
+  </svg>${nums}`;
+}
+
+function pathCardBody(){
+  const sel = selected;
+  const cast = sel && sel.kind === 'cast' ? castOf(sel.id) : null;
+  if(!cast) return `<div class="empty" style="padding:16px 0">${T('Select an actor on the floor to record a path.')}</div>`;
+  const a = appOf(UI.scene, cast.id);
+  const saved = a && Array.isArray(a.path) ? a.path : [];
+  const rec = !!(pathMode && pathMode.scene === UI.scene && pathMode.cast === cast.id);
+  const who = `<div class="sp-row" style="padding-top:0">
+      <span class="sp-dot" style="--c:${cast.color}">${initials(cast.name)}</span>
+      <div class="sp-main"><b>${esc(cast.role)}</b><span>${esc(cast.name)}</span></div>
+    </div>`;
+  if(rec){
+    return who + `<div class="stage-hint" style="margin-top:8px">${T('Recording path for {role}. Click the floor to add points.', {role:esc(cast.role)})}</div>
+      <div class="dirbar">
+        <button class="btn sm" data-path-undo ${pathMode.points.length ? '' : 'disabled'}>${T('Undo point')}</button>
+        <button class="btn sm primary" data-path-save>${T('Save path')}</button>
+        <button class="btn sm" data-path-cancel>${T('Cancel')}</button>
+      </div>
+      <div class="dim2" style="font-size:11px;margin-top:8px">${pl(pathMode.points.length,'point')}</div>`;
+  }
+  const on = !!(a && a.on);
+  return who + `<div class="stage-hint" style="margin-top:8px">${saved.length
+      ? T('{n} recorded · the path starts from the actor’s current mark.', {n:pl(saved.length,'point')})
+      : T('No path recorded for this actor.')}</div>
+    ${!on ? `<div class="stage-hint" style="color:var(--amber)">${T('Place the actor on stage first.')}</div>` : ''}
+    <div class="dirbar">
+      ${saved.length
+        ? `<button class="btn sm" data-path-edit ${on ? '' : 'disabled'}>${T('Edit path')}</button>`
+        : `<button class="btn sm" data-path-start ${on ? '' : 'disabled'}>${T('Record path')}</button>`}
+      ${saved.length ? `<button class="btn sm" data-path-preview ${on ? '' : 'disabled'}>${T('Preview path')}</button>` : ''}
+      ${saved.length ? `<button class="btn sm ghost danger" data-path-clear>${T('Clear path')}</button>` : ''}
+    </div>
+    ${!saved.length ? `<div class="stage-hint" style="margin-top:8px">${T('Click points on the floor to record a path.')}</div>` : ''}`;
+}
+
+function refreshPathUI(){
+  if(UI.view !== 'stage') return;
+  const host = document.getElementById('path-layer-host');
+  if(host) host.innerHTML = pathOverlayHTML();
+  const card = document.getElementById('path-card');
+  if(card) card.innerHTML = pathCardBody();
+  const canvas = document.getElementById('stage-canvas');
+  if(canvas) canvas.classList.toggle('recording', !!(pathMode && selected && selected.kind === 'cast' && pathMode.scene === UI.scene && pathMode.cast === selected.id));
+}
+
 function viewStage(){
   const scenes = sceneList();
   if(!sceneOf(UI.scene)) UI.scene = scenes[0] ? scenes[0].id : null;
@@ -1209,6 +1354,7 @@ function viewStage(){
   const sceneProps = propsIn(UI.scene);
   const availProps = S.props.filter(pr=>!pr.scenes.includes(UI.scene));
   const sceneCues = cuesIn(UI.scene);
+  const recordingHere = !!(pathMode && selected && selected.kind === 'cast' && pathMode.scene === UI.scene && pathMode.cast === selected.id);
   const dirChips = UI.lang === 'zh'
     ? [['Gerda 走到左前','左前'], ['Kay 走到右后','右后'], ['所有人回位','回位']]
     : [['Puck crosses to downstage left','cross DS left'], ['Puck crosses to upstage right','cross US right'], ['Everybody to marks','to marks']];
@@ -1273,7 +1419,10 @@ function viewStage(){
       <div>
         <div class="stage-frame">
           <div class="stage-band"><span>${T('UPSTAGE · BACK WALL')}</span><span class="stage-readout" id="stage-readout">${T('free floor')}</span></div>
-          <div class="stage-canvas" id="stage-canvas">${placed.map(tokCast).join('')}${marks.map(tokProp).join('')}</div>
+          <div class="stage-canvas ${recordingHere?'recording':''}" id="stage-canvas">
+            <div class="path-layer-host" id="path-layer-host">${pathOverlayHTML()}</div>
+            ${placed.map(tokCast).join('')}${marks.map(tokProp).join('')}
+          </div>
           <div class="stage-band">${T('AUDIENCE · AROUND THE ARC')}</div>
         </div>
         <div class="stage-hint">${T('Plan view of the half-round floor — back wall at the top, audience around the arc. Drag a circle or a tag anywhere inside the curve; the position saves to this scene. Click a token to select it, nudge with the arrow keys (hold Shift for 5% steps), ⌘/Ctrl Z to undo. Or write a note in Movement directions and let the app walk the blocking for you.')}</div>
@@ -1288,6 +1437,10 @@ function viewStage(){
       </div>
 
       <div class="side">
+        <div class="card" id="path-card">
+          <div class="sec">${T('Movement paths')}</div>
+          ${pathCardBody()}
+        </div>
         <div class="card">
           <div class="sec">${T('Movement directions')}</div>
           <textarea class="ta dirbox" id="dir-input" placeholder="${dirPlaceholder}">${esc(UI.dirText||'')}</textarea>
@@ -1562,10 +1715,22 @@ function viewRun(){
   const next = list[idx+1];
   const sc = sceneOf(cue.scene);
   const castHere = onStage(cue.scene);
+  const pathCount = castHere.filter(p=>{
+    const a = appOf(cue.scene, p.cast.id);
+    return a && Array.isArray(a.path) && a.path.length;
+  }).length;
   const done = UI.executed.slice().reverse();
   const pct = Math.round((idx/list.length)*100);
 
   return `<div class="wrap" style="max-width:1080px">
+    <div class="run-stage-card">
+      <div class="run-stage-head">
+        <div><div class="sec" style="margin:0">${T('Stage · {tag}', {tag:sceneTag(cue.scene)})}</div></div>
+        <button class="btn sm ghost" data-act="replaypaths" ${pathCount ? '' : 'disabled'}>${T('Replay movement')}</button>
+      </div>
+      <div class="run-stage-canvas" id="run-stage-canvas">${castHere.map(tokRun).join('')}</div>
+      <div class="run-stage-note">${pathCount ? (pathCount === 1 ? T('One actor follows a recorded path.') : T('{n} actors follow a recorded path.', {n:pathCount})) : T('No recorded paths in this scene.')}</div>
+    </div>
     <div class="runwrap">
       <div class="gostage">
         <div class="now">${T('SCENE {tag} · {title} · {dur}', {tag:sceneTag(cue.scene), title:esc(sc.title).toUpperCase(), dur:esc(sc.duration||'')})}</div>
@@ -1612,6 +1777,100 @@ function viewRun(){
       </div>
     </div>
   </div>`;
+}
+
+/* ---------- run-stage motion along recorded paths ---------- */
+function rafFrame(fn){
+  return (typeof requestAnimationFrame === 'function') ? requestAnimationFrame(fn) : setTimeout(fn, 16);
+}
+function cancelFrame(id){
+  if(id == null) return;
+  if(typeof cancelAnimationFrame === 'function') cancelAnimationFrame(id);
+  else clearTimeout(id);
+}
+function currentRunCue(){
+  const list = cueList();
+  return list[UI.runIdx] || null;
+}
+function clearRunAnimation(){
+  if(runAnim && runAnim.raf) cancelFrame(runAnim.raf);
+  runAnim = null;
+  runPositions = {};
+}
+function resetRunMotion(){
+  clearRunAnimation();
+  runScene = null;
+}
+function setRunPosition(id, p){
+  runPositions[id] = {x:p.x, y:p.y};
+  const el = document.querySelector('[data-run-id="' + id + '"]');
+  if(el){ el.style.left = p.x + '%'; el.style.top = p.y + '%'; }
+}
+function applyRunPositions(){
+  Object.keys(runPositions).forEach(id=>{
+    const el = document.querySelector('[data-run-id="' + id + '"]');
+    if(el){ el.style.left = runPositions[id].x + '%'; el.style.top = runPositions[id].y + '%'; }
+  });
+}
+function countRunPaths(scene){
+  return onStage(scene).filter(p=>{
+    const a = appOf(scene, p.cast.id);
+    return a && Array.isArray(a.path) && a.path.length;
+  }).length;
+}
+function playRunPaths(scene){
+  clearRunAnimation();
+  runScene = scene;
+  const movers = [];
+  onStage(scene).forEach(p=>{
+    runPositions[p.cast.id] = {x:p.x, y:p.y};
+    const a = appOf(scene, p.cast.id);
+    const pts = a && Array.isArray(a.path) ? a.path : [];
+    if(pts.length){
+      movers.push({id:p.cast.id, start:{x:p.x, y:p.y},
+                   pts:pts.map(q=>({x:q.x, y:q.y})), delay:movers.length * 140});
+    }
+  });
+  if(!movers.length){ applyRunPositions(); return 0; }
+  const now = Date.now(), segMs = 850;
+  const ease = t => t < 0.5 ? 2*t*t : 1 - Math.pow(-2*t + 2, 2) / 2;
+  const frame = ()=>{
+    if(!runAnim || runAnim.scene !== scene) return;
+    const t = Date.now();
+    let allDone = true;
+    movers.forEach(m=>{
+      const elapsed = t - now - m.delay;
+      if(elapsed <= 0){ setRunPosition(m.id, m.start); allDone = false; return; }
+      const total = m.pts.length * segMs;
+      if(elapsed >= total){ setRunPosition(m.id, m.pts[m.pts.length-1]); return; }
+      allDone = false;
+      const raw = elapsed / segMs;
+      const seg = Math.min(m.pts.length-1, Math.floor(raw));
+      const f = ease(raw - seg);
+      const from = seg === 0 ? m.start : m.pts[seg-1];
+      const to = m.pts[seg];
+      setRunPosition(m.id, {x:from.x + (to.x-from.x)*f, y:from.y + (to.y-from.y)*f});
+    });
+    if(!allDone){ runAnim.raf = rafFrame(frame); }
+    else { runAnim.done = true; runAnim.raf = null; applyRunPositions(); }
+  };
+  runAnim = {scene, movers, start:now, raf:null, done:false};
+  const rafId = rafFrame(frame);
+  if(runAnim && !runAnim.done) runAnim.raf = rafId;
+  return movers.length;
+}
+function syncRunMotion(){
+  const cue = currentRunCue();
+  if(!cue){ clearRunAnimation(); runScene = null; return; }
+  if(runScene !== cue.scene){ playRunPaths(cue.scene); }
+  else { applyRunPositions(); }
+}
+function replayRunPaths(){
+  const cue = currentRunCue();
+  if(!cue) return;
+  if(!countRunPaths(cue.scene)){ toast(T('No recorded paths in this scene.')); return; }
+  resetRunMotion();
+  render();
 }
 
 /* ==================================================================
@@ -1673,6 +1932,81 @@ function autoArrange(){
   toast(T('Stage tidied — grab a circle to fine-tune it.'));
 }
 
+/* ---------- path recording ---------- */
+function startPath(edit){
+  if(!selected || selected.kind !== 'cast'){ toast(T('Select an actor first.')); return; }
+  const a = appOf(UI.scene, selected.id);
+  if(!a || !a.on){ toast(T('Place the actor on stage first.')); return; }
+  pathMode = {scene:UI.scene, cast:selected.id,
+              points: edit && Array.isArray(a.path) ? a.path.map(p=>({x:p.x, y:p.y})) : []};
+  render();
+  toast(T(edit ? 'Editing path — click the floor to add points.' : 'Recording path — click the floor to add points.'));
+}
+
+function addPathPoint(clientX, clientY, canvas){
+  if(!pathMode) return;
+  if(pathMode.points.length >= 30){ toast(T('A path can have up to 30 points.')); return; }
+  const r = canvas.getBoundingClientRect();
+  if(!r.width || !r.height) return;
+  const p = clampDisc(((clientX - r.left) / r.width) * 100, ((clientY - r.top) / r.height) * 100);
+  pathMode.points.push({x:Math.round(p.x*100)/100, y:Math.round(p.y*100)/100});
+  render();
+}
+
+function undoPathPoint(){
+  if(!pathMode) return;
+  pathMode.points.pop();
+  render();
+}
+
+function savePath(){
+  if(!pathMode) return;
+  const a = appOf(pathMode.scene, pathMode.cast);
+  const pts = cleanPath(pathMode.points);
+  if(a){
+    if(pts.length) a.path = pts; else delete a.path;
+  }
+  pathMode = null;
+  resetRunMotion();
+  save(); render();
+  toast(pts.length ? T('Path saved — {n}.', {n:pl(pts.length,'point')}) : T('Path cleared.'));
+}
+
+function cancelPath(){
+  pathMode = null;
+  render();
+  toast(T('Path changes discarded.'));
+}
+
+function clearPath(){
+  if(!selected || selected.kind !== 'cast') return;
+  const a = appOf(UI.scene, selected.id);
+  if(!a) return;
+  delete a.path;
+  resetRunMotion();
+  save(); render();
+  toast(T('Path cleared.'));
+}
+
+function previewPath(){
+  if(!selected || selected.kind !== 'cast') return;
+  const id = selected.id;
+  const a = appOf(UI.scene, id);
+  if(!a || !Array.isArray(a.path) || !a.path.length) return;
+  const pts = a.path.map(p=>({x:p.x, y:p.y}));
+  const scene = UI.scene;
+  let i = 0;
+  const step = ()=>{
+    if(i >= pts.length) return;
+    const p = pts[i++];
+    animateToken('cast', id, p.x, p.y, 700);
+    setTimeout(step, 760);
+  };
+  step();
+  toast(T('Previewing the path.'));
+  setTimeout(()=>{ if(UI.view === 'stage' && UI.scene === scene) render(); }, pts.length * 770 + 800);
+}
+
 function romanNum(n){
   const map = [[1000,'M'],[900,'CM'],[500,'D'],[400,'CD'],[100,'C'],[90,'XC'],
                [50,'L'],[40,'XL'],[10,'X'],[9,'IX'],[5,'V'],[4,'IV'],[1,'I']];
@@ -1717,7 +2051,7 @@ function addScene(actId){
 
 function resetShow(){
   S = seed(); ensureApps(); normalise(); save();
-  moveStack.length = 0; selected = null;
+  moveStack.length = 0; selected = null; pathMode = null; resetRunMotion();
   UI.runIdx = 0; UI.executed = []; UI.started = null; UI.dirText = '';
   UI.propQ = ''; UI.propStatus = 'all';
   UI.scene = S.scenes[0] ? S.scenes[0].id : null;
@@ -1727,7 +2061,7 @@ function resetShow(){
 
 function newShow(){
   S = blankShow(); ensureApps(); normalise(); save();
-  moveStack.length = 0; selected = null;
+  moveStack.length = 0; selected = null; pathMode = null; resetRunMotion();
   UI.runIdx = 0; UI.executed = []; UI.started = null; UI.dirText = '';
   UI.propQ = ''; UI.propStatus = 'all';
   UI.scene = S.scenes[0] ? S.scenes[0].id : null;
@@ -1785,6 +2119,7 @@ function addCue(){
 }
 
 function startRun(fromIdx){
+  resetRunMotion();
   UI.runIdx = fromIdx || 0;
   UI.executed = [];
   UI.started = Date.now();
@@ -1830,7 +2165,7 @@ function filterPropRows(){
    12. EVENT WIRING
    ================================================================== */
 document.addEventListener('click', e=>{
-  const el = e.target.closest('[data-view],[data-act],[data-lang],[data-addact],[data-addscene],[data-delscene],[data-renameact],[data-place],[data-send],[data-delcast],[data-delprop],[data-delcue],[data-rmprop],[data-rmpropscene],[data-jump]');
+  const el = e.target.closest('[data-view],[data-act],[data-lang],[data-addact],[data-addscene],[data-delscene],[data-renameact],[data-place],[data-send],[data-delcast],[data-delprop],[data-delcue],[data-rmprop],[data-rmpropscene],[data-jump],[data-path-start],[data-path-edit],[data-path-save],[data-path-cancel],[data-path-undo],[data-path-clear],[data-path-preview]');
   if(!el) return;
 
   if(el.dataset.lang){ setLanguage(el.dataset.lang); return; }
@@ -1856,6 +2191,7 @@ document.addEventListener('click', e=>{
     else if(act==='undorun') undoRun();
     else if(act==='go') goNext();
     else if(act==='back') goBack();
+    else if(act==='replaypaths') replayRunPaths();
     return;
   }
 
@@ -1920,6 +2256,13 @@ document.addEventListener('click', e=>{
     startRun(Number(el.dataset.jump));
     return;
   }
+  if(el.dataset.pathStart !== undefined){ startPath(false); return; }
+  if(el.dataset.pathEdit !== undefined){ startPath(true); return; }
+  if(el.dataset.pathSave !== undefined){ savePath(); return; }
+  if(el.dataset.pathCancel !== undefined){ cancelPath(); return; }
+  if(el.dataset.pathUndo !== undefined){ undoPathPoint(); return; }
+  if(el.dataset.pathClear !== undefined){ clearPath(); return; }
+  if(el.dataset.pathPreview !== undefined){ previewPath(); return; }
 });
 
 document.addEventListener('input', e=>{
@@ -1960,7 +2303,7 @@ document.addEventListener('change', e=>{
           S = clean;
           ensureApps();
           normalise();
-          moveStack.length = 0; selected = null;
+          moveStack.length = 0; selected = null; pathMode = null; resetRunMotion();
           UI.runIdx = 0; UI.executed = []; UI.started = null; UI.dirText = '';
           UI.propQ = ''; UI.propStatus = 'all';
           if(!sceneOf(UI.scene)) UI.scene = sceneList()[0] ? sceneList()[0].id : null;
@@ -1993,7 +2336,13 @@ document.addEventListener('change', e=>{
       const from = S.apps.filter(a=>a.scene===src && a.on && a.x!=null);
       S.apps.filter(a=>a.scene===dst).forEach(a=>{
         const match = from.find(x=>x.cast===a.cast);
-        if(match){ a.on = true; a.x = match.x; a.y = match.y; } else { a.on = false; }
+        if(match){
+          a.on = true; a.x = match.x; a.y = match.y;
+          if(Array.isArray(match.path) && match.path.length) a.path = match.path.map(p=>({x:p.x, y:p.y}));
+          else delete a.path;
+        } else {
+          a.on = false; delete a.path;
+        }
       });
     }
     save(); render();
@@ -2035,7 +2384,10 @@ document.addEventListener('keydown', e=>{
 /* ---------- move tokens around the floor ---------- */
 let tokDrag = null;
 let selected = null;
+let pathMode = null;
 const moveStack = [];
+let runScene = null, runAnim = null;
+let runPositions = {};
 
 function rememberDelete(label, before, scene){
   deleteStack.push({label, before, scene});
@@ -2129,14 +2481,21 @@ function nudge(dx, dy){
     updateReadout(m.x, m.y);
   }
   save();
+  refreshPathUI();
 }
 
 document.addEventListener('pointerdown', e=>{
   const canvas = document.getElementById('stage-canvas');
   if(!canvas) return;
+  if(pathMode && canvas.contains(e.target)){
+    e.preventDefault();
+    addPathPoint(e.clientX, e.clientY, canvas);
+    return;
+  }
   const el = e.target.closest('.actor-token,.prop-token');
   if(!el || !canvas.contains(el)){
-    if(selected){ selected = null; applySelection(); }
+    if(pathMode) return;
+    if(selected){ selected = null; applySelection(); refreshPathUI(); }
     return;
   }
   e.preventDefault();
@@ -2173,6 +2532,7 @@ function endTokenDrag(){
 
   selected = {kind:d.kind, id:d.id};
   applySelection();
+  refreshPathUI();
 
   if(!d.moved){
     if(d.kind === 'cast'){
@@ -2429,7 +2789,7 @@ document.addEventListener('keydown', e=>{
     else if(UI.view === 'stage' && moveStack.length){ e.preventDefault(); undoMove(); }
     return;
   }
-  if(e.key === 'Escape' && UI.view === 'stage'){ selected = null; applySelection(); return; }
+  if(e.key === 'Escape' && UI.view === 'stage'){ selected = null; pathMode = null; applySelection(); refreshPathUI(); return; }
   if(UI.view !== 'stage' || !selected) return;
 
   if(e.key === 'Delete' || e.key === 'Backspace'){
